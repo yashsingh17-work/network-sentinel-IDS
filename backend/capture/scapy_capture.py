@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import platform
+import ctypes
 from dataclasses import dataclass
 from threading import RLock
 from typing import Any, Callable, Protocol
@@ -37,6 +38,11 @@ class ScapyPacketCapture:
                 return self._status
             if platform.system() != "Windows":
                 return self._fail("Live capture currently supports Windows. Use a supported Scapy capture adapter on this OS.")
+            if not self._is_elevated():
+                return self._fail(
+                    "Packet capture requires an elevated Windows process on this Npcap installation. "
+                    "Close this server, open PowerShell as Administrator, and start Network Sentinel again."
+                )
             try:
                 from scapy.sendrecv import AsyncSniffer
 
@@ -71,6 +77,13 @@ class ScapyPacketCapture:
     def _fail(self, message: str) -> CaptureStatus:
         self._status = CaptureStatus(running=False, interface=self._status.interface, error=message)
         return self._status
+
+    @staticmethod
+    def _is_elevated() -> bool:
+        try:
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        except (AttributeError, OSError):
+            return False
 
 
 class InMemoryPacketCapture:
