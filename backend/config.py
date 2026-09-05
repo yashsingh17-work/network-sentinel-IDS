@@ -20,7 +20,9 @@ class Settings:
     port_scan_port_threshold: int = 50
     port_scan_time_window_seconds: int = 10
     syn_rate_threshold: int = 100
+    syn_time_window_seconds: int = 1
     traffic_rate_threshold: int = 1_000
+    traffic_rate_window_seconds: int = 1
     alert_cooldown_seconds: int = 60
     rate_window_seconds: int = 1
     history_window_seconds: int = 60
@@ -28,6 +30,7 @@ class Settings:
     max_tracked_ports: int = 500
     max_connections: int = 10_000
     connection_ttl_seconds: int = 300
+    max_detector_events_per_key: int = 10_000
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -35,7 +38,9 @@ class Settings:
             port_scan_port_threshold=_positive_int("PORT_SCAN_PORT_THRESHOLD", 50),
             port_scan_time_window_seconds=_positive_int("PORT_SCAN_TIME_WINDOW", 10),
             syn_rate_threshold=_positive_int("SYN_RATE_THRESHOLD", 100),
+            syn_time_window_seconds=_positive_int("SYN_TIME_WINDOW", 1),
             traffic_rate_threshold=_positive_int("TRAFFIC_RATE_THRESHOLD", 1_000),
+            traffic_rate_window_seconds=_positive_int("TRAFFIC_RATE_WINDOW", 1),
             alert_cooldown_seconds=_positive_int("ALERT_COOLDOWN", 60),
             rate_window_seconds=_positive_int("RATE_WINDOW_SECONDS", 1),
             history_window_seconds=_positive_int("HISTORY_WINDOW_SECONDS", 60),
@@ -43,4 +48,5 @@ class Settings:
             max_tracked_ports=_positive_int("MAX_TRACKED_PORTS", 500),
             max_connections=_positive_int("MAX_CONNECTIONS", 10_000),
             connection_ttl_seconds=_positive_int("CONNECTION_TTL_SECONDS", 300),
+            max_detector_events_per_key=_positive_int("MAX_DETECTOR_EVENTS_PER_KEY", 10_000),
         )
