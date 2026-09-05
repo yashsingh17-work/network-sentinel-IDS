@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 
 from backend.config import Settings
+from backend.capture import InMemoryPacketCapture
 from backend.main import create_app
 from backend.models import NormalizedPacket
 from backend.services import build_services
@@ -30,7 +31,7 @@ def client_and_services(tmp_path):
         icmp_sweep_destination_threshold=100,
         dns_query_rate_threshold=100,
     )
-    services = build_services(settings)
+    services = build_services(settings, capture=InMemoryPacketCapture())
     return TestClient(create_app(services)), services
 
 
@@ -42,7 +43,7 @@ def test_monitoring_lifecycle_and_traffic_endpoints(tmp_path) -> None:
     services.monitoring.process(packet(443))
 
     assert started["active"] is True
-    assert started["capture_ready"] is False
+    assert started["capture_ready"] is True
     assert client.get("/api/traffic/overall").json()["total_packets"] == 1
     assert client.get("/api/traffic/protocols").json()["protocols"] == {"TCP": 1}
     assert client.get("/api/traffic/top-ips").json()["sources"][0]["value"] == "10.0.0.10"

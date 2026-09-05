@@ -15,8 +15,8 @@ python -m pytest
 ```
 
 The first implemented component is the packet parser. It converts Scapy IPv4 TCP,
-UDP, ICMP, and other IP packets to `NormalizedPacket`, while safely discarding
-non-IP and malformed input. Live capture is intentionally not connected yet.
+UDP, ICMP, ARP, and other IP packets to `NormalizedPacket`, while safely
+discarding malformed input.
 
 ## Current detection scope
 
@@ -37,11 +37,31 @@ python -m uvicorn backend.main:app --reload
 
 Open `http://127.0.0.1:8000/docs` to explore the generated API documentation.
 The current API exposes monitoring controls, traffic statistics, and persisted
-alert history/details. It deliberately reports `capture_ready: false` until the
-next phase wires in the Windows packet-capture adapter.
+alert history/details.
 
 Key endpoints: `POST /api/monitoring/start`, `POST /api/monitoring/stop`,
 `GET /api/traffic/overall`, `GET /api/traffic/protocols`,
 `GET /api/traffic/top-ips`, `GET /api/traffic/top-ports`,
 `GET /api/traffic/connections`, `GET /api/alerts/recent`,
 `GET /api/alerts/history`, and `GET /api/alerts/{alert_id}`.
+
+## Run the dashboard and live monitoring
+
+Install [Npcap](https://npcap.com/#download) on Windows and select its
+WinPcap-compatible mode during installation. Then open PowerShell **as
+Administrator** in this project folder and run:
+
+```powershell
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000/`. Press **Start monitoring**. If Npcap, an
+interface, or permission is unavailable, the dashboard shows an actionable
+capture error instead of reporting a false active state. Optionally set
+`CAPTURE_INTERFACE` to a Windows/Npcap interface name before launching.
+
+The dashboard uses WebSockets for live updates and displays packet/byte rates,
+protocols, active connections, explainable security alerts, observed devices,
+ARP-conflict warnings, and a read-only local Wi-Fi security posture. An ARP
+warning is evidence to investigate, never automatic proof that a device is
+malicious.

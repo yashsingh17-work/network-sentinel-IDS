@@ -14,10 +14,10 @@ class PacketParser:
 
     def parse(self, packet: Any) -> NormalizedPacket | None:
         try:
-            if not packet.haslayer("IP"):
+            if not packet.haslayer("IP") and not packet.haslayer("ARP"):
                 return None
 
-            ip = packet["IP"]
+            ip = packet["IP"] if packet.haslayer("IP") else None
             protocol = "OTHER"
             source_port: int | None = None
             destination_port: int | None = None
@@ -25,8 +25,28 @@ class PacketParser:
             icmp_type: int | None = None
             icmp_code: int | None = None
             dns_query_name: str | None = None
+            source_mac: str | None = None
+            destination_mac: str | None = None
+            arp_operation: int | None = None
+            arp_source_ip: str | None = None
+            arp_source_mac: str | None = None
+            arp_target_ip: str | None = None
+            arp_target_mac: str | None = None
 
-            if packet.haslayer("TCP"):
+            if packet.haslayer("Ether"):
+                ether = packet["Ether"]
+                source_mac = str(ether.src).lower()
+                destination_mac = str(ether.dst).lower()
+
+            if packet.haslayer("ARP"):
+                arp = packet["ARP"]
+                protocol = "ARP"
+                arp_operation = int(arp.op)
+                arp_source_ip = str(arp.psrc)
+                arp_source_mac = str(arp.hwsrc).lower()
+                arp_target_ip = str(arp.pdst)
+                arp_target_mac = str(arp.hwdst).lower()
+            elif packet.haslayer("TCP"):
                 tcp = packet["TCP"]
                 protocol = "TCP"
                 source_port = int(tcp.sport)
@@ -50,8 +70,8 @@ class PacketParser:
             timestamp = datetime.fromtimestamp(float(raw_timestamp), tz=timezone.utc) if raw_timestamp else datetime.now(timezone.utc)
             return NormalizedPacket(
                 timestamp=timestamp,
-                source_ip=str(ip.src),
-                destination_ip=str(ip.dst),
+                source_ip=arp_source_ip or str(ip.src),
+                destination_ip=arp_target_ip or str(ip.dst),
                 protocol=protocol,
                 source_port=source_port,
                 destination_port=destination_port,
@@ -60,6 +80,13 @@ class PacketParser:
                 icmp_type=icmp_type,
                 icmp_code=icmp_code,
                 dns_query_name=dns_query_name,
+                source_mac=source_mac,
+                destination_mac=destination_mac,
+                arp_operation=arp_operation,
+                arp_source_ip=arp_source_ip,
+                arp_source_mac=arp_source_mac,
+                arp_target_ip=arp_target_ip,
+                arp_target_mac=arp_target_mac,
             )
         except (AttributeError, TypeError, ValueError, IndexError):
             return None

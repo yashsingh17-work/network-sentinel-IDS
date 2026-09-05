@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Literal
 
-Protocol = Literal["TCP", "UDP", "ICMP", "OTHER"]
+Protocol = Literal["TCP", "UDP", "ICMP", "ARP", "OTHER"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +24,13 @@ class NormalizedPacket:
     icmp_type: int | None = None
     icmp_code: int | None = None
     dns_query_name: str | None = None
+    source_mac: str | None = None
+    destination_mac: str | None = None
+    arp_operation: int | None = None
+    arp_source_ip: str | None = None
+    arp_source_mac: str | None = None
+    arp_target_ip: str | None = None
+    arp_target_mac: str | None = None
 
     @classmethod
     def now(
@@ -39,6 +46,13 @@ class NormalizedPacket:
         icmp_type: int | None = None,
         icmp_code: int | None = None,
         dns_query_name: str | None = None,
+        source_mac: str | None = None,
+        destination_mac: str | None = None,
+        arp_operation: int | None = None,
+        arp_source_ip: str | None = None,
+        arp_source_mac: str | None = None,
+        arp_target_ip: str | None = None,
+        arp_target_mac: str | None = None,
     ) -> "NormalizedPacket":
         return cls(
             timestamp=datetime.now(timezone.utc),
@@ -52,4 +66,11 @@ class NormalizedPacket:
             icmp_type=icmp_type,
             icmp_code=icmp_code,
             dns_query_name=dns_query_name,
+            source_mac=source_mac,
+            destination_mac=destination_mac,
+            arp_operation=arp_operation,
+            arp_source_ip=arp_source_ip,
+            arp_source_mac=arp_source_mac,
+            arp_target_ip=arp_target_ip,
+            arp_target_mac=arp_target_mac,
         )

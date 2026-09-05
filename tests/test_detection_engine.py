@@ -112,3 +112,14 @@ def test_detects_unusually_high_dns_query_rate() -> None:
 
     assert len(findings) == 1
     assert findings[0].detection_type == "DNS_QUERY_ANOMALY"
+
+
+def test_detects_conflicting_arp_replies_without_claiming_certainty() -> None:
+    subject = engine(arp_conflict_mac_threshold=2)
+
+    subject.analyze(packet(protocol="ARP", arp_operation=2, arp_source_ip="192.168.1.1", arp_source_mac="aa:bb:cc:dd:ee:01"))
+    findings = subject.analyze(packet(protocol="ARP", arp_operation=2, arp_source_ip="192.168.1.1", arp_source_mac="aa:bb:cc:dd:ee:02"))
+
+    assert len(findings) == 1
+    assert findings[0].detection_type == "ARP_SPOOFING_SUSPECTED"
+    assert "may indicate ARP spoofing" in findings[0].evidence

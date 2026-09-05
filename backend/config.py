@@ -27,6 +27,8 @@ class Settings:
     icmp_sweep_time_window_seconds: int = 10
     dns_query_rate_threshold: int = 100
     dns_query_time_window_seconds: int = 10
+    arp_conflict_time_window_seconds: int = 120
+    arp_conflict_mac_threshold: int = 2
     alert_cooldown_seconds: int = 60
     rate_window_seconds: int = 1
     history_window_seconds: int = 60
@@ -36,6 +38,10 @@ class Settings:
     connection_ttl_seconds: int = 300
     max_detector_events_per_key: int = 10_000
     database_path: str = "network_sentinel.db"
+    max_tracked_devices: int = 500
+    device_ttl_seconds: int = 3_600
+    capture_interface: str | None = None
+    wifi_status_refresh_seconds: int = 30
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -50,6 +56,8 @@ class Settings:
             icmp_sweep_time_window_seconds=_positive_int("ICMP_SWEEP_TIME_WINDOW", 10),
             dns_query_rate_threshold=_positive_int("DNS_QUERY_RATE_THRESHOLD", 100),
             dns_query_time_window_seconds=_positive_int("DNS_QUERY_TIME_WINDOW", 10),
+            arp_conflict_time_window_seconds=_positive_int("ARP_CONFLICT_TIME_WINDOW", 120),
+            arp_conflict_mac_threshold=_positive_int("ARP_CONFLICT_MAC_THRESHOLD", 2),
             alert_cooldown_seconds=_positive_int("ALERT_COOLDOWN", 60),
             rate_window_seconds=_positive_int("RATE_WINDOW_SECONDS", 1),
             history_window_seconds=_positive_int("HISTORY_WINDOW_SECONDS", 60),
@@ -59,4 +67,8 @@ class Settings:
             connection_ttl_seconds=_positive_int("CONNECTION_TTL_SECONDS", 300),
             max_detector_events_per_key=_positive_int("MAX_DETECTOR_EVENTS_PER_KEY", 10_000),
             database_path=getenv("DATABASE_PATH", "network_sentinel.db"),
+            max_tracked_devices=_positive_int("MAX_TRACKED_DEVICES", 500),
+            device_ttl_seconds=_positive_int("DEVICE_TTL_SECONDS", 3_600),
+            capture_interface=getenv("CAPTURE_INTERFACE") or None,
+            wifi_status_refresh_seconds=_positive_int("WIFI_STATUS_REFRESH_SECONDS", 30),
         )

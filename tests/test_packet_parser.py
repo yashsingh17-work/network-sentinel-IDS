@@ -59,6 +59,22 @@ def test_parses_a_dns_query_name() -> None:
     assert parsed.dns_query_name == "example.com"
 
 
+def test_parses_arp_identity_details() -> None:
+    packet = SyntheticPacket(
+        {
+            "ARP": SimpleNamespace(op=2, psrc="192.168.1.10", hwsrc="aa:bb:cc:dd:ee:01", pdst="192.168.1.1", hwdst="aa:bb:cc:dd:ee:ff"),
+            "Ether": SimpleNamespace(src="aa:bb:cc:dd:ee:01", dst="ff:ff:ff:ff:ff:ff"),
+        },
+        size=42,
+    )
+
+    parsed = PacketParser().parse(packet)
+
+    assert parsed is not None
+    assert parsed.protocol == "ARP"
+    assert (parsed.arp_operation, parsed.arp_source_ip, parsed.arp_source_mac) == (2, "192.168.1.10", "aa:bb:cc:dd:ee:01")
+
+
 def test_handles_non_ip_and_malformed_packet_without_crashing() -> None:
     assert PacketParser().parse(SyntheticPacket({"Ether": object()})) is None
     assert PacketParser().parse(ip_packet(("TCP", SimpleNamespace(sport="invalid")))) is None

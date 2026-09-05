@@ -15,6 +15,8 @@ from backend.api.schemas import (
     RankedValueResponse,
     TopIpsResponse,
     TopPortsResponse,
+    ObservedDeviceResponse,
+    WifiSecurityResponse,
 )
 from backend.database import AlertNotFoundError
 from backend.services import ApplicationServices
@@ -33,6 +35,8 @@ def _status_response(services: ApplicationServices) -> MonitoringStatusResponse:
         active=current.active,
         started_at=current.started_at,
         capture_ready=current.capture_ready,
+        interface=current.interface,
+        last_error=current.last_error,
     )
 
 
@@ -104,6 +108,35 @@ def connection_statistics(request: Request) -> ConnectionStatisticsResponse:
     return ConnectionStatisticsResponse(
         active_connections=connections.active_connections,
         total_connections_seen=connections.total_connections_seen,
+    )
+
+
+@router.get("/devices", response_model=list[ObservedDeviceResponse])
+def observed_devices(request: Request) -> list[ObservedDeviceResponse]:
+    return [
+        ObservedDeviceResponse(
+            mac_address=device.mac_address,
+            ip_addresses=device.ip_addresses,
+            first_seen=device.first_seen,
+            last_seen=device.last_seen,
+            packets_seen=device.packets_seen,
+            protocols=device.protocols,
+        )
+        for device in _services(request).device_tracker.snapshot()
+    ]
+
+
+@router.get("/wifi/security", response_model=WifiSecurityResponse)
+def wifi_security(request: Request) -> WifiSecurityResponse:
+    current = _services(request).wifi_security.status()
+    return WifiSecurityResponse(
+        available=current.available,
+        connected=current.connected,
+        ssid=current.ssid,
+        authentication=current.authentication,
+        cipher=current.cipher,
+        secure=current.secure,
+        summary=current.summary,
     )
 
 

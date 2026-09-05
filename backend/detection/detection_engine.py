@@ -11,7 +11,9 @@ from typing import Literal
 from backend.config import Settings
 from backend.models import NormalizedPacket
 
-DetectionType = Literal["PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY"]
+DetectionType = Literal[
+    "PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY", "ARP_SPOOFING_SUSPECTED"
+]
 Severity = Literal["LOW", "MEDIUM", "HIGH"]
 
 
@@ -40,6 +42,7 @@ class DetectionEngine:
         self._traffic_events: deque[datetime] = deque()
         self._icmp_events: dict[str, deque[tuple[datetime, str]]] = {}
         self._dns_events: dict[str, deque[datetime]] = {}
+        self._arp_claims: dict[str, dict[str, datetime]] = {}
         self._cooldowns: dict[tuple[DetectionType, str | None], datetime] = {}
 
     def analyze(self, packet: NormalizedPacket) -> list[DetectionFinding]:
@@ -61,6 +64,9 @@ class DetectionEngine:
             dns_anomaly = self._check_dns_query_rate(packet)
             if dns_anomaly is not None:
                 findings.append(dns_anomaly)
+            arp_conflict = self._check_arp_conflict(packet)
+            if arp_conflict is not None:
+                findings.append(arp_conflict)
             self._prune_cooldowns(packet.timestamp)
             return findings
 
@@ -189,6 +195,35 @@ class DetectionEngine:
             evidence=(
                 f"{packet.source_ip} made {query_count} DNS queries within "
                 f"{self._settings.dns_query_time_window_seconds} second(s) (threshold: {threshold})."
+            ),
+        )
+
+    def _check_arp_conflict(self, packet: NormalizedPacket) -> DetectionFinding | None:
+        """Flag conflicting ARP replies; this is a warning, not proof of an attack."""
+        if packet.protocol != "ARP" or packet.arp_operation != 2 or not packet.arp_source_ip or not packet.arp_source_mac:
+            return None
+        cutoff = packet.timestamp - timedelta(seconds=self._settings.arp_conflict_time_window_seconds)
+        claims = self._arp_claims.setdefault(packet.arp_source_ip, {})
+        for mac, last_seen in list(claims.items()):
+            if last_seen < cutoff:
+                del claims[mac]
+        claims[packet.arp_source_mac] = packet.timestamp
+        mac_count = len(claims)
+        subject = packet.arp_source_ip
+        if mac_count < self._settings.arp_conflict_mac_threshold or not self._ready("ARP_SPOOFING_SUSPECTED", subject, packet.timestamp):
+            return None
+        return DetectionFinding(
+            timestamp=packet.timestamp,
+            detection_type="ARP_SPOOFING_SUSPECTED",
+            severity="HIGH" if mac_count > self._settings.arp_conflict_mac_threshold else "MEDIUM",
+            source_ip=packet.arp_source_ip,
+            destination_ip=packet.arp_target_ip,
+            observed_value=mac_count,
+            threshold=self._settings.arp_conflict_mac_threshold,
+            evidence=(
+                f"ARP conflict: {packet.arp_source_ip} was claimed by {mac_count} MAC addresses within "
+                f"{self._settings.arp_conflict_time_window_seconds} seconds. This may indicate ARP spoofing "
+                f"or a legitimate high-availability/network change."
             ),
         )
 

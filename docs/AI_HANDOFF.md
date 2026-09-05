@@ -13,11 +13,19 @@
 
 ## Current scope
 
-Five explainable, header-only detections exist: `PORT_SCAN`, `SYN_FLOOD`,
-`TRAFFIC_RATE_ANOMALY`, `ICMP_SWEEP`, and `DNS_QUERY_ANOMALY`. Each finding has
+Six explainable, header-only detections exist: `PORT_SCAN`, `SYN_FLOOD`,
+`TRAFFIC_RATE_ANOMALY`, `ICMP_SWEEP`, `DNS_QUERY_ANOMALY`, and
+`ARP_SPOOFING_SUSPECTED`. Each finding has
 a timestamp, severity, source/destination IPs when relevant, observed value,
 threshold, and a human-readable explanation. The engine keeps time-window data
 bounded and suppresses duplicates using `ALERT_COOLDOWN`.
+
+The application retains Ethernet/ARP identity for a bounded observed-device
+list, detects conflicting ARP replies, and provides a local Windows Wi-Fi
+posture check. These are risk signals—not conclusive device-malice labels. The
+dashboard files are `frontend/index.html`, `frontend/styles.css`, and
+`frontend/app.js`; its WebSocket layer is `backend/api/realtime.py` and
+`backend/api/dashboard_payload.py`.
 
 ## Safe change checklist
 
@@ -31,6 +39,6 @@ bounded and suppresses duplicates using `ALERT_COOLDOWN`.
 
 ## API milestone status
 
-The REST API, alert manager, and SQLite database are complete. Packet capture,
-WebSockets, and the dashboard are intentionally still separate future phases.
-Until capture is connected, the API accurately returns `capture_ready: false`.
+The REST API, alert manager, SQLite database, Scapy capture adapter, WebSockets,
+and dashboard are complete. Npcap and appropriate Windows permissions are
+still required for actual live capture.

@@ -12,6 +12,8 @@ class MonitoringStatusResponse(BaseModel):
     active: bool
     started_at: datetime | None
     capture_ready: bool
+    interface: str | None
+    last_error: str | None
 
 
 class OverallTrafficResponse(BaseModel):
@@ -47,7 +49,7 @@ class ConnectionStatisticsResponse(BaseModel):
 class AlertResponse(BaseModel):
     id: str
     timestamp: datetime
-    detection_type: Literal["PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY"]
+    detection_type: Literal["PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY", "ARP_SPOOFING_SUSPECTED"]
     severity: Literal["LOW", "MEDIUM", "HIGH"]
     source_ip: str | None
     destination_ip: str | None
@@ -60,3 +62,22 @@ class AlertHistoryResponse(BaseModel):
     alerts: list[AlertResponse]
     limit: int = Field(ge=1, le=500)
     offset: int = Field(ge=0)
+
+
+class ObservedDeviceResponse(BaseModel):
+    mac_address: str
+    ip_addresses: list[str]
+    first_seen: datetime
+    last_seen: datetime
+    packets_seen: int
+    protocols: dict[str, int]
+
+
+class WifiSecurityResponse(BaseModel):
+    available: bool
+    connected: bool
+    ssid: str | None
+    authentication: str | None
+    cipher: str | None
+    secure: bool | None
+    summary: str
