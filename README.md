@@ -17,3 +17,14 @@ python -m pytest
 The first implemented component is the packet parser. It converts Scapy IPv4 TCP,
 UDP, ICMP, and other IP packets to `NormalizedPacket`, while safely discarding
 non-IP and malformed input. Live capture is intentionally not connected yet.
+
+## Current detection scope
+
+The rule engine provides five transparent, configurable checks: port scans,
+high initial TCP SYN activity, total packet-rate anomalies, ICMP echo sweeps,
+and unusually high per-source DNS query volume. It examines packet headers and
+DNS query names only; it does not inspect application payloads or claim to
+classify malicious domains.
+
+See `docs/AI_HANDOFF.md` for the small set of files another coding agent should
+read before modifying detection behavior.

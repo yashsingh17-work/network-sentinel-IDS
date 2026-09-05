@@ -23,6 +23,10 @@ class Settings:
     syn_time_window_seconds: int = 1
     traffic_rate_threshold: int = 1_000
     traffic_rate_window_seconds: int = 1
+    icmp_sweep_destination_threshold: int = 20
+    icmp_sweep_time_window_seconds: int = 10
+    dns_query_rate_threshold: int = 100
+    dns_query_time_window_seconds: int = 10
     alert_cooldown_seconds: int = 60
     rate_window_seconds: int = 1
     history_window_seconds: int = 60
@@ -41,6 +45,10 @@ class Settings:
             syn_time_window_seconds=_positive_int("SYN_TIME_WINDOW", 1),
             traffic_rate_threshold=_positive_int("TRAFFIC_RATE_THRESHOLD", 1_000),
             traffic_rate_window_seconds=_positive_int("TRAFFIC_RATE_WINDOW", 1),
+            icmp_sweep_destination_threshold=_positive_int("ICMP_SWEEP_DESTINATION_THRESHOLD", 20),
+            icmp_sweep_time_window_seconds=_positive_int("ICMP_SWEEP_TIME_WINDOW", 10),
+            dns_query_rate_threshold=_positive_int("DNS_QUERY_RATE_THRESHOLD", 100),
+            dns_query_time_window_seconds=_positive_int("DNS_QUERY_TIME_WINDOW", 10),
             alert_cooldown_seconds=_positive_int("ALERT_COOLDOWN", 60),
             rate_window_seconds=_positive_int("RATE_WINDOW_SECONDS", 1),
             history_window_seconds=_positive_int("HISTORY_WINDOW_SECONDS", 60),

@@ -11,7 +11,7 @@ from typing import Literal
 from backend.config import Settings
 from backend.models import NormalizedPacket
 
-DetectionType = Literal["PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY"]
+DetectionType = Literal["PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY"]
 Severity = Literal["LOW", "MEDIUM", "HIGH"]
 
 
@@ -38,6 +38,8 @@ class DetectionEngine:
         self._port_events: dict[str, deque[tuple[datetime, int]]] = {}
         self._syn_events: dict[str, deque[datetime]] = {}
         self._traffic_events: deque[datetime] = deque()
+        self._icmp_events: dict[str, deque[tuple[datetime, str]]] = {}
+        self._dns_events: dict[str, deque[datetime]] = {}
         self._cooldowns: dict[tuple[DetectionType, str | None], datetime] = {}
 
     def analyze(self, packet: NormalizedPacket) -> list[DetectionFinding]:
@@ -53,6 +55,12 @@ class DetectionEngine:
             rate_anomaly = self._check_traffic_rate(packet)
             if rate_anomaly is not None:
                 findings.append(rate_anomaly)
+            icmp_sweep = self._check_icmp_sweep(packet)
+            if icmp_sweep is not None:
+                findings.append(icmp_sweep)
+            dns_anomaly = self._check_dns_query_rate(packet)
+            if dns_anomaly is not None:
+                findings.append(dns_anomaly)
             self._prune_cooldowns(packet.timestamp)
             return findings
 
@@ -129,6 +137,58 @@ class DetectionEngine:
             evidence=(
                 f"Observed {packet_count} packets across all traffic within "
                 f"{self._settings.traffic_rate_window_seconds} second(s) (threshold: {threshold})."
+            ),
+        )
+
+    def _check_icmp_sweep(self, packet: NormalizedPacket) -> DetectionFinding | None:
+        if packet.protocol != "ICMP" or packet.icmp_type not in {8, 128}:
+            return None
+        events = self._events_for(self._icmp_events, packet.source_ip)
+        cutoff = packet.timestamp - timedelta(seconds=self._settings.icmp_sweep_time_window_seconds)
+        self._prune_events(events, cutoff)
+        events.append((packet.timestamp, packet.destination_ip))
+        self._cap_events(events)
+        destinations = len({destination for _, destination in events})
+        if destinations < self._settings.icmp_sweep_destination_threshold or not self._ready("ICMP_SWEEP", packet.source_ip, packet.timestamp):
+            return None
+        threshold = self._settings.icmp_sweep_destination_threshold
+        return DetectionFinding(
+            timestamp=packet.timestamp,
+            detection_type="ICMP_SWEEP",
+            severity="HIGH" if destinations >= threshold * 2 else "MEDIUM",
+            source_ip=packet.source_ip,
+            destination_ip=packet.destination_ip,
+            observed_value=destinations,
+            threshold=threshold,
+            evidence=(
+                f"{packet.source_ip} sent ICMP echo requests to {destinations} unique destinations "
+                f"within {self._settings.icmp_sweep_time_window_seconds} seconds (threshold: {threshold})."
+            ),
+        )
+
+    def _check_dns_query_rate(self, packet: NormalizedPacket) -> DetectionFinding | None:
+        if packet.dns_query_name is None:
+            return None
+        events = self._events_for(self._dns_events, packet.source_ip)
+        cutoff = packet.timestamp - timedelta(seconds=self._settings.dns_query_time_window_seconds)
+        self._prune_events(events, cutoff)
+        events.append(packet.timestamp)
+        self._cap_events(events)
+        query_count = len(events)
+        if query_count < self._settings.dns_query_rate_threshold or not self._ready("DNS_QUERY_ANOMALY", packet.source_ip, packet.timestamp):
+            return None
+        threshold = self._settings.dns_query_rate_threshold
+        return DetectionFinding(
+            timestamp=packet.timestamp,
+            detection_type="DNS_QUERY_ANOMALY",
+            severity="HIGH" if query_count >= threshold * 2 else "MEDIUM",
+            source_ip=packet.source_ip,
+            destination_ip=packet.destination_ip,
+            observed_value=query_count,
+            threshold=threshold,
+            evidence=(
+                f"{packet.source_ip} made {query_count} DNS queries within "
+                f"{self._settings.dns_query_time_window_seconds} second(s) (threshold: {threshold})."
             ),
         )
 

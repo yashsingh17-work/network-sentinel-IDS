@@ -44,11 +44,19 @@ def test_parses_udp_packet() -> None:
 
 
 def test_parses_icmp_packet() -> None:
-    parsed = PacketParser().parse(ip_packet(("ICMP", object())))
+    parsed = PacketParser().parse(ip_packet(("ICMP", SimpleNamespace(type=8, code=0))))
 
     assert parsed is not None
     assert parsed.protocol == "ICMP"
     assert parsed.source_port is None
+    assert (parsed.icmp_type, parsed.icmp_code) == (8, 0)
+
+
+def test_parses_a_dns_query_name() -> None:
+    parsed = PacketParser().parse(ip_packet(("UDP", SimpleNamespace(sport=53000, dport=53)), ("DNSQR", SimpleNamespace(qname=b"example.com."))))
+
+    assert parsed is not None
+    assert parsed.dns_query_name == "example.com"
 
 
 def test_handles_non_ip_and_malformed_packet_without_crashing() -> None:

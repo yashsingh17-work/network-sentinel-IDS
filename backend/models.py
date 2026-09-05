@@ -21,6 +21,9 @@ class NormalizedPacket:
     destination_port: int | None
     tcp_flags: str | None
     size_bytes: int
+    icmp_type: int | None = None
+    icmp_code: int | None = None
+    dns_query_name: str | None = None
 
     @classmethod
     def now(
@@ -33,6 +36,9 @@ class NormalizedPacket:
         destination_port: int | None = None,
         tcp_flags: str | None = None,
         size_bytes: int = 0,
+        icmp_type: int | None = None,
+        icmp_code: int | None = None,
+        dns_query_name: str | None = None,
     ) -> "NormalizedPacket":
         return cls(
             timestamp=datetime.now(timezone.utc),
@@ -43,4 +49,7 @@ class NormalizedPacket:
             destination_port=destination_port,
             tcp_flags=tcp_flags,
             size_bytes=size_bytes,
+            icmp_type=icmp_type,
+            icmp_code=icmp_code,
+            dns_query_name=dns_query_name,
         )

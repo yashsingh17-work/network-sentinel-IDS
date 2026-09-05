@@ -88,3 +88,27 @@ def test_normal_traffic_does_not_trigger_any_detection() -> None:
         findings.extend(subject.analyze(packet(timestamp=NOW + timedelta(seconds=offset * 2))))
 
     assert findings == []
+
+
+def test_detects_icmp_sweep_but_ignores_icmp_replies() -> None:
+    subject = engine(icmp_sweep_destination_threshold=3)
+
+    assert subject.analyze(packet(protocol="ICMP", icmp_type=0, destination_ip="10.0.0.21")) == []
+    subject.analyze(packet(protocol="ICMP", icmp_type=8, destination_ip="10.0.0.21"))
+    subject.analyze(packet(protocol="ICMP", icmp_type=8, destination_ip="10.0.0.22"))
+    findings = subject.analyze(packet(protocol="ICMP", icmp_type=8, destination_ip="10.0.0.23"))
+
+    assert len(findings) == 1
+    assert findings[0].detection_type == "ICMP_SWEEP"
+    assert "3 unique destinations" in findings[0].evidence
+
+
+def test_detects_unusually_high_dns_query_rate() -> None:
+    subject = engine(dns_query_rate_threshold=3)
+
+    subject.analyze(packet(protocol="UDP", destination_port=53, dns_query_name="one.example"))
+    subject.analyze(packet(protocol="UDP", destination_port=53, dns_query_name="two.example"))
+    findings = subject.analyze(packet(protocol="UDP", destination_port=53, dns_query_name="three.example"))
+
+    assert len(findings) == 1
+    assert findings[0].detection_type == "DNS_QUERY_ANOMALY"
