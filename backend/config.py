@@ -35,6 +35,7 @@ class Settings:
     max_connections: int = 10_000
     connection_ttl_seconds: int = 300
     max_detector_events_per_key: int = 10_000
+    database_path: str = "network_sentinel.db"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -57,4 +58,5 @@ class Settings:
             max_connections=_positive_int("MAX_CONNECTIONS", 10_000),
             connection_ttl_seconds=_positive_int("CONNECTION_TTL_SECONDS", 300),
             max_detector_events_per_key=_positive_int("MAX_DETECTOR_EVENTS_PER_KEY", 10_000),
+            database_path=getenv("DATABASE_PATH", "network_sentinel.db"),
         )

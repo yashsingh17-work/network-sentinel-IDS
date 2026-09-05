@@ -28,3 +28,20 @@ classify malicious domains.
 
 See `docs/AI_HANDOFF.md` for the small set of files another coding agent should
 read before modifying detection behavior.
+
+## Run the backend API
+
+```powershell
+python -m uvicorn backend.main:app --reload
+```
+
+Open `http://127.0.0.1:8000/docs` to explore the generated API documentation.
+The current API exposes monitoring controls, traffic statistics, and persisted
+alert history/details. It deliberately reports `capture_ready: false` until the
+next phase wires in the Windows packet-capture adapter.
+
+Key endpoints: `POST /api/monitoring/start`, `POST /api/monitoring/stop`,
+`GET /api/traffic/overall`, `GET /api/traffic/protocols`,
+`GET /api/traffic/top-ips`, `GET /api/traffic/top-ports`,
+`GET /api/traffic/connections`, `GET /api/alerts/recent`,
+`GET /api/alerts/history`, and `GET /api/alerts/{alert_id}`.

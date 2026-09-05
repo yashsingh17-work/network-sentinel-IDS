@@ -7,6 +7,9 @@
 - `backend/models.py` defines `NormalizedPacket`, the data contract for all layers.
 - `backend/parser/packet_parser.py` extracts packet header details into that model.
 - `tests/test_detection_engine.py` and `tests/test_packet_parser.py` protect the rules.
+- `backend/services/monitoring_service.py` is the single packet-processing entrypoint.
+- `backend/database/alert_repository.py` persists alerts in SQLite.
+- `backend/api/routes.py` provides the FastAPI REST surface.
 
 ## Current scope
 
@@ -25,3 +28,9 @@ bounded and suppresses duplicates using `ALERT_COOLDOWN`.
    machine learning, cloud services, or automatic response.
 4. Add normal-traffic and positive synthetic tests.
 5. Run `python -m pytest tests -q` before committing.
+
+## API milestone status
+
+The REST API, alert manager, and SQLite database are complete. Packet capture,
+WebSockets, and the dashboard are intentionally still separate future phases.
+Until capture is connected, the API accurately returns `capture_ready: false`.
