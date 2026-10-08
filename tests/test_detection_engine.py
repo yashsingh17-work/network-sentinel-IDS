@@ -116,6 +116,16 @@ def test_detects_unusually_high_dns_query_rate() -> None:
     assert findings[0].detection_type == "DNS_QUERY_ANOMALY"
 
 
+def test_detects_domain_matching_local_threat_indicator() -> None:
+    subject = DetectionEngine(Settings(port_scan_port_threshold=100, syn_rate_threshold=100, traffic_rate_threshold=100, unsafe_domains=("known-bad.example",)))
+
+    findings = subject.analyze(packet(protocol="UDP", destination_port=53, dns_query_name="cdn.known-bad.example."))
+
+    assert len(findings) == 1
+    assert findings[0].detection_type == "SUSPICIOUS_DOMAIN"
+    assert findings[0].severity == "HIGH"
+
+
 def test_detects_conflicting_arp_replies_without_claiming_certainty() -> None:
     subject = engine(arp_conflict_mac_threshold=2)
 

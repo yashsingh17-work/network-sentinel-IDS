@@ -70,6 +70,7 @@ class Settings:
     auth_failure_time_window_seconds: int = 300
     suspicious_auth_sequence_window_seconds: int = 600
     packet_capture_enabled: bool = True
+    auto_start_monitoring: bool = True
     zeek_enabled: bool = False
     suricata_enabled: bool = False
     windows_events_enabled: bool = False
@@ -80,6 +81,12 @@ class Settings:
     country_lookup_enabled: bool = False
     country_lookup_url: str = "https://ipwho.is/{ip}"
     ip_enrichment_cache_seconds: int = 86_400
+    download_monitor_enabled: bool = True
+    download_directories: tuple[str, ...] = ()
+    download_monitor_interval_seconds: int = 15
+    download_max_files: int = 1_000
+    download_hash_max_bytes: int = 134_217_728
+    unsafe_domains: tuple[str, ...] = ()
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -88,6 +95,8 @@ class Settings:
         sources = _nested(document, "sources", default={})
         storage = _nested(document, "storage", default={})
         enrichment = _nested(document, "enrichment", default={})
+        download_monitor = sources.get("download_monitor", {}) if isinstance(sources, dict) else {}
+        threat_intelligence = _nested(document, "threat_intelligence", default={})
 
         def number(name: str, yaml_key: str, fallback: int) -> int:
             return _positive_int(name, int(detection.get(yaml_key, fallback)))
@@ -106,6 +115,14 @@ class Settings:
             return bool(value)
 
         capture_source = sources.get("packet_capture", {}) if isinstance(sources, dict) else {}
+        configured_downloads = download_monitor.get("directories", [str(Path.home() / "Downloads")]) if isinstance(download_monitor, dict) else [str(Path.home() / "Downloads")]
+        if not isinstance(configured_downloads, list):
+            configured_downloads = [str(Path.home() / "Downloads")]
+        if not configured_downloads:
+            configured_downloads = [str(Path.home() / "Downloads")]
+        configured_domains = threat_intelligence.get("unsafe_domains", []) if isinstance(threat_intelligence, dict) else []
+        if not isinstance(configured_domains, list):
+            configured_domains = []
         return cls(
             port_scan_port_threshold=number("PORT_SCAN_PORT_THRESHOLD", "port_scan_port_threshold", 50),
             port_scan_time_window_seconds=number("PORT_SCAN_TIME_WINDOW", "port_scan_time_window_seconds", 10),
@@ -140,6 +157,7 @@ class Settings:
             auth_failure_time_window_seconds=number("AUTH_FAILURE_WINDOW", "auth_failure_time_window_seconds", 300),
             suspicious_auth_sequence_window_seconds=number("AUTH_SEQUENCE_WINDOW", "suspicious_auth_sequence_window_seconds", 600),
             packet_capture_enabled=enabled("PACKET_CAPTURE_ENABLED", "packet_capture", True),
+            auto_start_monitoring=boolean("AUTO_START_MONITORING", capture_source.get("auto_start", True) if isinstance(capture_source, dict) else True),
             zeek_enabled=enabled("ZEEK_ENABLED", "zeek", False),
             suricata_enabled=enabled("SURICATA_ENABLED", "suricata", False),
             windows_events_enabled=enabled("WINDOWS_EVENTS_ENABLED", "windows_events", False),
@@ -150,4 +168,10 @@ class Settings:
             country_lookup_enabled=boolean("COUNTRY_LOOKUP_ENABLED", enrichment.get("country_lookup_enabled", False)),
             country_lookup_url=getenv("COUNTRY_LOOKUP_URL", str(enrichment.get("country_lookup_url", "https://ipwho.is/{ip}"))),
             ip_enrichment_cache_seconds=_positive_int("IP_ENRICHMENT_CACHE_SECONDS", int(enrichment.get("cache_seconds", 86_400))),
+            download_monitor_enabled=enabled("DOWNLOAD_MONITOR_ENABLED", "download_monitor", True),
+            download_directories=tuple(str(Path(item).expanduser()) for item in configured_downloads if str(item).strip()),
+            download_monitor_interval_seconds=_positive_int("DOWNLOAD_MONITOR_INTERVAL_SECONDS", int(download_monitor.get("interval_seconds", 15)) if isinstance(download_monitor, dict) else 15),
+            download_max_files=_positive_int("DOWNLOAD_MAX_FILES", int(download_monitor.get("max_files", 1_000)) if isinstance(download_monitor, dict) else 1_000),
+            download_hash_max_bytes=_positive_int("DOWNLOAD_HASH_MAX_BYTES", int(download_monitor.get("hash_max_bytes", 134_217_728)) if isinstance(download_monitor, dict) else 134_217_728),
+            unsafe_domains=tuple(str(domain).strip().rstrip(".").lower() for domain in configured_domains if str(domain).strip()),
         )

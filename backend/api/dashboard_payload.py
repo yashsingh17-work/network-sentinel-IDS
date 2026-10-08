@@ -32,6 +32,7 @@ def dashboard_payload(services: ApplicationServices) -> dict[str, Any]:
     status = services.monitoring.status()
     wifi = services.wifi_security.status()
     profiles = services.device_profiles.profiles()
+    downloads = services.endpoint_safety.download_status()
     return {
         "type": "dashboard_update",
         "data": {
@@ -78,6 +79,13 @@ def dashboard_payload(services: ApplicationServices) -> dict[str, Any]:
                 "cipher": wifi.cipher,
                 "secure": wifi.secure,
                 "summary": wifi.summary,
+            },
+            "endpoint_safety": {
+                "downloads_enabled": downloads.enabled,
+                "downloads_initialized": downloads.initialized,
+                "tracked_download_files": downloads.tracked_files,
+                "download_directories": downloads.directories,
+                "last_download_scan_at": downloads.last_scan_at,
             },
         },
     }

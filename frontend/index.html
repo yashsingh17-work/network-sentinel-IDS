@@ -10,13 +10,13 @@
     <header class="topbar">
       <div class="brand"><span class="brand-mark">◈</span><span>NETWORK <b>SENTINEL</b></span></div>
       <div class="status-wrap"><span id="status-dot" class="status-dot"></span><span id="monitor-status">INACTIVE</span></div>
-      <div class="actions"><button id="windows-import-button" class="secondary">Import Windows logins</button><button id="demo-button" class="secondary">Run safe demo</button><select id="packet-tracer-scenario" class="scenario-select" aria-label="Packet Tracer scene"></select><button id="packet-tracer-button" class="secondary">Run Packet Tracer scene</button><button id="monitor-button" class="primary">Start monitoring</button></div>
+      <div class="actions"><button id="downloads-audit-button" class="secondary">Audit Downloads</button><button id="windows-import-button" class="secondary">Import Windows logins</button><button id="demo-button" class="secondary">Run safe demo</button><select id="packet-tracer-scenario" class="scenario-select" aria-label="Packet Tracer scene"></select><button id="packet-tracer-button" class="secondary">Run Packet Tracer scene</button><button id="monitor-button" class="primary">Start monitoring</button></div>
     </header>
     <main>
       <section id="capture-message" class="notice hidden" role="alert"></section>
       <section class="hero">
         <div><p class="eyebrow">LOCAL SECURITY OPERATIONS</p><h1>Live visibility, clear evidence.</h1><p class="subtle">Analyze local network, Windows login, Zeek, Suricata, and safe synthetic security events in one place.</p></div>
-        <div id="wifi-card" class="wifi-card"><span>WI-FI POSTURE</span><strong id="wifi-state">Checking…</strong><small id="wifi-detail">Reading Windows network status</small></div>
+        <div class="posture-cards"><div id="wifi-card" class="wifi-card"><span>WI-FI POSTURE</span><strong id="wifi-state">Checking…</strong><small id="wifi-detail">Reading Windows network status</small></div><div id="downloads-card" class="wifi-card"><span>DOWNLOAD WATCH</span><strong id="downloads-state">Checking…</strong><small id="downloads-detail">Preparing local Downloads monitor</small></div></div>
       </section>
       <section class="metric-grid" aria-label="Traffic overview">
         <article><span>Total packets</span><strong id="total-packets">0</strong></article>

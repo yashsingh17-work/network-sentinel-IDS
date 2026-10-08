@@ -23,6 +23,8 @@ from backend.api.schemas import (
     EventBatchResponse,
     PacketTracerScenarioResponse,
     PacketTracerScenarioRunResponse,
+    DownloadAuditResponse,
+    DownloadMonitorStatusResponse,
     SecurityEventRequest,
     SecurityEventResponse,
 )
@@ -210,6 +212,25 @@ def wifi_security(request: Request) -> WifiSecurityResponse:
         cipher=current.cipher,
         secure=current.secure,
         summary=current.summary,
+    )
+
+
+@router.get("/endpoint/downloads/status", response_model=DownloadMonitorStatusResponse)
+def download_monitor_status(request: Request) -> DownloadMonitorStatusResponse:
+    current = _services(request).endpoint_safety.download_status()
+    return DownloadMonitorStatusResponse(
+        enabled=current.enabled, initialized=current.initialized, directories=current.directories,
+        tracked_files=current.tracked_files, last_scan_at=current.last_scan_at,
+    )
+
+
+@router.post("/endpoint/downloads/audit", response_model=DownloadAuditResponse)
+def audit_current_downloads(request: Request) -> DownloadAuditResponse:
+    """On-demand local inspection of current Downloads files; does not upload or execute files."""
+    inspected = _services(request).endpoint_safety.audit_current_downloads()
+    return DownloadAuditResponse(
+        files_inspected=inspected, events_created=inspected,
+        alerts=[],
     )
 
 

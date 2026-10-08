@@ -13,6 +13,7 @@ def _client(tmp_path):
     services = build_services(
         Settings(
             database_path=str(tmp_path / "events.db"),
+            auto_start_monitoring=False,
             auth_failure_threshold=2,
             traffic_rate_threshold=100,
             port_scan_port_threshold=100,
@@ -70,3 +71,35 @@ def test_safe_demo_creates_local_investigation_data(tmp_path) -> None:
     assert response.status_code == 200
     detections = {alert["detection_type"] for alert in response.json()["alerts"]}
     assert {"PORT_SCAN", "AUTH_FAILURE_BURST", "SUSPICIOUS_AUTH_SEQUENCE", "SURICATA_SIGNATURE", "ZEEK_NETWORK_ANOMALY"} <= detections
+
+
+def test_event_api_marks_unverified_risky_download_for_review(tmp_path) -> None:
+    with _client(tmp_path) as client:
+        response = client.post(
+            "/api/events",
+            json={
+                "timestamp": datetime.now(timezone.utc).isoformat(), "source": "windows_download_monitor", "event_type": "download_observed",
+                "bytes_count": 4096,
+                "metadata": {"filename": "unknown-tool.exe", "path": "C:\\Users\\Student\\Downloads\\unknown-tool.exe", "extension": ".exe", "signature_status": "NotSigned", "risky_file_type": True, "mark_of_the_web": True},
+            },
+        )
+
+    alert = response.json()["alerts"][0]
+    assert alert["detection_type"] == "UNVERIFIED_RISKY_DOWNLOAD"
+    assert alert["severity"] == "MEDIUM"
+    assert alert["context"]["filename"] == "unknown-tool.exe"
+
+
+def test_event_api_flags_unsafe_wifi_posture(tmp_path) -> None:
+    with _client(tmp_path) as client:
+        response = client.post(
+            "/api/events",
+            json={
+                "timestamp": datetime.now(timezone.utc).isoformat(), "source": "windows_wifi_monitor", "event_type": "wifi_posture",
+                "metadata": {"ssid": "CoffeeShop", "authentication": "Open", "cipher": "None", "posture": "open_or_legacy", "summary": "Insecure Wi-Fi: open security was detected."},
+            },
+        )
+
+    alert = response.json()["alerts"][0]
+    assert alert["detection_type"] == "UNSAFE_WIFI_POSTURE"
+    assert alert["severity"] == "HIGH"

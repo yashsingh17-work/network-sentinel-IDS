@@ -44,7 +44,7 @@ def test_device_tracker_groups_packets_by_mac() -> None:
 
 def test_in_memory_capture_drives_full_pipeline_and_websocket(tmp_path) -> None:
     capture = InMemoryPacketCapture()
-    settings = Settings(database_path=str(tmp_path / "live.db"), port_scan_port_threshold=100, syn_rate_threshold=100, traffic_rate_threshold=100)
+    settings = Settings(database_path=str(tmp_path / "live.db"), auto_start_monitoring=False, port_scan_port_threshold=100, syn_rate_threshold=100, traffic_rate_threshold=100)
     services = build_services(settings, capture=capture)
     app = create_app(services)
 

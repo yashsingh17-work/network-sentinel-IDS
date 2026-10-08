@@ -26,6 +26,7 @@ def packet(destination_port: int) -> NormalizedPacket:
 def client_and_services(tmp_path):
     settings = Settings(
         database_path=str(tmp_path / "api-alerts.db"),
+        auto_start_monitoring=False,
         port_scan_port_threshold=2,
         syn_rate_threshold=100,
         traffic_rate_threshold=100,

@@ -55,7 +55,7 @@ class AlertResponse(BaseModel):
     detection_type: Literal[
         "PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY",
         "ARP_SPOOFING_SUSPECTED", "AUTH_FAILURE_BURST", "SUSPICIOUS_AUTH_SEQUENCE",
-        "SURICATA_SIGNATURE", "ZEEK_NETWORK_ANOMALY",
+        "SURICATA_SIGNATURE", "ZEEK_NETWORK_ANOMALY", "DOWNLOAD_OBSERVED", "UNVERIFIED_RISKY_DOWNLOAD", "UNSAFE_WIFI_POSTURE", "SUSPICIOUS_DOMAIN",
     ]
     severity: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
     source_ip: str | None
@@ -149,3 +149,15 @@ class PacketTracerScenarioResponse(BaseModel):
 
 class PacketTracerScenarioRunResponse(EventBatchResponse):
     scenario: PacketTracerScenarioResponse
+
+
+class DownloadMonitorStatusResponse(BaseModel):
+    enabled: bool
+    initialized: bool
+    directories: list[str]
+    tracked_files: int
+    last_scan_at: str | None
+
+
+class DownloadAuditResponse(EventBatchResponse):
+    files_inspected: int

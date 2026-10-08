@@ -21,9 +21,15 @@ def create_app(services: ApplicationServices | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         async def publish_updates() -> None:
             while True:
+                await asyncio.to_thread(app.state.services.endpoint_safety.poll)
                 await app.state.hub.broadcast(dashboard_payload(app.state.services))
                 await asyncio.sleep(1)
 
+        if app.state.services.settings.auto_start_monitoring:
+            await asyncio.to_thread(app.state.services.monitoring.start)
+        # Establish the Downloads baseline before normal polling. Existing files
+        # are not spammed as alerts; the dashboard audit button can inspect them.
+        await asyncio.to_thread(app.state.services.endpoint_safety.poll)
         task = asyncio.create_task(publish_updates())
         yield
         task.cancel()

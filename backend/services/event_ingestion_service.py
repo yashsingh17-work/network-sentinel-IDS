@@ -66,7 +66,49 @@ class EventIngestionService:
                     recommended_investigation="Open the related Zeek records, validate the hosts and protocol, then pivot on the source and destination IP addresses.",
                 )
             ]
+        if event.source == "windows_download_monitor" and event.event_type == "download_observed":
+            return [self._download_finding(event)]
+        if event.source == "windows_wifi_monitor" and event.event_type == "wifi_posture":
+            return [self._wifi_finding(event)]
         return []
+
+    @staticmethod
+    def _download_finding(event: SecurityEvent) -> DetectionFinding:
+        metadata = event.metadata
+        filename = str(metadata.get("filename") or "downloaded file")
+        extension = str(metadata.get("extension") or "unknown type")
+        signature_status = str(metadata.get("signature_status") or "Unknown")
+        risky = bool(metadata.get("risky_file_type"))
+        unverified_risky = risky and signature_status != "Valid"
+        detection_type = "UNVERIFIED_RISKY_DOWNLOAD" if unverified_risky else "DOWNLOAD_OBSERVED"
+        severity = "MEDIUM" if unverified_risky else "LOW"
+        evidence = (
+            f"{filename} ({extension}, {event.bytes_count or 0} bytes) was observed in a monitored Downloads folder. "
+            f"Authenticode status: {signature_status}."
+        )
+        if unverified_risky:
+            evidence += " This is an executable/script-like file without a valid Authenticode signature; review before opening it."
+        return DetectionFinding(
+            timestamp=event.timestamp, detection_type=detection_type, severity=severity, source_ip=None, destination_ip=None,
+            observed_value=1, threshold=1, evidence=evidence, confidence=0.95, source=event.source,
+            recommended_investigation="Confirm the expected sender and publisher, compare the SHA-256 with a trusted source, and scan the file with your endpoint protection before opening it.",
+            context={"filename": filename, "path": metadata.get("path"), "extension": extension, "size_bytes": event.bytes_count,
+                     "sha256": metadata.get("sha256"), "hash_status": metadata.get("hash_status"),
+                     "mark_of_the_web": metadata.get("mark_of_the_web"), "signature_status": signature_status,
+                     "publisher": metadata.get("publisher"), "risky_file_type": risky},
+        )
+
+    @staticmethod
+    def _wifi_finding(event: SecurityEvent) -> DetectionFinding:
+        posture = str(event.metadata.get("posture") or "unverified")
+        high_risk = posture == "open_or_legacy"
+        summary = str(event.metadata.get("summary") or "Windows could not verify Wi-Fi security.")
+        return DetectionFinding(
+            timestamp=event.timestamp, detection_type="UNSAFE_WIFI_POSTURE", severity="HIGH" if high_risk else "MEDIUM",
+            source_ip=None, destination_ip=None, observed_value=1, threshold=1, evidence=summary, confidence=0.95,
+            source=event.source, recommended_investigation="Disconnect from the network if it is not trusted. Use WPA2/WPA3 with AES/CCMP, avoid sensitive work on public Wi-Fi, and use a trusted VPN where appropriate.",
+            context={"ssid": event.metadata.get("ssid"), "authentication": event.metadata.get("authentication"), "cipher": event.metadata.get("cipher"), "posture": posture},
+        )
 
     def _authentication_failure(self, event: SecurityEvent) -> list[DetectionFinding]:
         subject = str(event.metadata.get("user") or event.source_ip or "unknown")

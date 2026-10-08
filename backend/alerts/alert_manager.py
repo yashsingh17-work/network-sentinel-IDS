@@ -21,7 +21,7 @@ class AlertManager:
 
     def create_from_finding(self, finding: DetectionFinding) -> Alert | None:
         """Persist a finding unless an identical subject is inside its cooldown."""
-        signature = (finding.detection_type, finding.source_ip, finding.destination_ip)
+        signature = self._signature(finding)
         with self._lock:
             self._prune(finding.timestamp)
             previous = self._recent_signatures.get(signature)
@@ -54,3 +54,10 @@ class AlertManager:
         expired = [signature for signature, timestamp in self._recent_signatures.items() if timestamp <= cutoff]
         for signature in expired:
             del self._recent_signatures[signature]
+
+    @staticmethod
+    def _signature(finding: DetectionFinding) -> tuple[str, str | None, str | None]:
+        """Keep independent download alerts from suppressing each other globally."""
+        if finding.detection_type in {"DOWNLOAD_OBSERVED", "UNVERIFIED_RISKY_DOWNLOAD"}:
+            return finding.detection_type, str(finding.context.get("path") or "unknown"), None
+        return finding.detection_type, finding.source_ip, finding.destination_ip

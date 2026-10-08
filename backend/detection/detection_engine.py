@@ -14,7 +14,8 @@ from backend.models import NormalizedPacket
 
 DetectionType = Literal[
     "PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY", "ARP_SPOOFING_SUSPECTED",
-    "AUTH_FAILURE_BURST", "SUSPICIOUS_AUTH_SEQUENCE", "SURICATA_SIGNATURE", "ZEEK_NETWORK_ANOMALY"
+    "AUTH_FAILURE_BURST", "SUSPICIOUS_AUTH_SEQUENCE", "SURICATA_SIGNATURE", "ZEEK_NETWORK_ANOMALY",
+    "DOWNLOAD_OBSERVED", "UNVERIFIED_RISKY_DOWNLOAD", "UNSAFE_WIFI_POSTURE", "SUSPICIOUS_DOMAIN"
 ]
 Severity = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 
@@ -70,6 +71,9 @@ class DetectionEngine:
             dns_anomaly = self._check_dns_query_rate(packet)
             if dns_anomaly is not None:
                 findings.append(dns_anomaly)
+            unsafe_domain = self._check_unsafe_domain(packet)
+            if unsafe_domain is not None:
+                findings.append(unsafe_domain)
             arp_conflict = self._check_arp_conflict(packet)
             if arp_conflict is not None:
                 findings.append(arp_conflict)
@@ -203,6 +207,22 @@ class DetectionEngine:
                 f"{packet.source_ip} made {query_count} DNS queries within "
                 f"{self._settings.dns_query_time_window_seconds} second(s) (threshold: {threshold})."
             ),
+        )
+
+    def _check_unsafe_domain(self, packet: NormalizedPacket) -> DetectionFinding | None:
+        if not packet.dns_query_name:
+            return None
+        domain = packet.dns_query_name.rstrip(".").lower()
+        indicator = next((item for item in self._settings.unsafe_domains if domain == item or domain.endswith(f".{item}")), None)
+        if indicator is None or not self._ready("SUSPICIOUS_DOMAIN", domain, packet.timestamp):
+            return None
+        return DetectionFinding(
+            timestamp=packet.timestamp, detection_type="SUSPICIOUS_DOMAIN", severity="HIGH",
+            source_ip=packet.source_ip, destination_ip=packet.destination_ip, observed_value=1, threshold=1,
+            evidence=f"DNS query for {domain} matched the configured local threat-domain indicator {indicator}.",
+            confidence=0.9, source="local_domain_indicator",
+            recommended_investigation="Do not continue to the site. Verify the domain against a trusted threat-intelligence source, inspect the endpoint for downloads, and block the domain at DNS/firewall level if confirmed.",
+            context={"dns_query_name": domain, "matched_indicator": indicator},
         )
 
     def _check_arp_conflict(self, packet: NormalizedPacket) -> DetectionFinding | None:

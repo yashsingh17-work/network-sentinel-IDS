@@ -3,6 +3,7 @@ sources:
   packet_capture:
     enabled: true
     interface: auto
+    auto_start: true
   zeek:
     enabled: false
   suricata:
@@ -11,6 +12,13 @@ sources:
     enabled: false
   synthetic:
     enabled: true
+  # Read-only local observation. Files are never opened as programs or sent away.
+  download_monitor:
+    enabled: true
+    directories: []
+    interval_seconds: 2
+    max_files: 1000
+    hash_max_bytes: 134217728
 
 storage:
   backend: sqlite
@@ -49,3 +57,8 @@ detection:
 # Optional: send normalized events to a locally managed Node-RED flow.
 orchestration:
   node_red_webhook_url: null
+
+# Keep this local unless you explicitly choose a cloud reputation provider.
+# Entries may be full domains, such as "known-bad.example".
+threat_intelligence:
+  unsafe_domains: []
