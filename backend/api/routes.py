@@ -17,8 +17,13 @@ from backend.api.schemas import (
     TopPortsResponse,
     ObservedDeviceResponse,
     WifiSecurityResponse,
+    CaptureInterfaceResponse,
+    EventIngestionResponse,
+    SecurityEventRequest,
+    SecurityEventResponse,
 )
 from backend.database import AlertNotFoundError
+from backend.events import SecurityEvent
 from backend.services import ApplicationServices
 
 
@@ -37,6 +42,7 @@ def _status_response(services: ApplicationServices) -> MonitoringStatusResponse:
         capture_ready=current.capture_ready,
         interface=current.interface,
         last_error=current.last_error,
+        packets_captured=current.packets_captured,
     )
 
 
@@ -51,12 +57,32 @@ def _alert_response(alert: Alert) -> AlertResponse:
         observed_value=alert.observed_value,
         threshold=alert.threshold,
         evidence=alert.evidence,
+        confidence=alert.confidence,
+        recommended_investigation=alert.recommended_investigation,
+        source=alert.source,
+    )
+
+
+def _event_response(event: SecurityEvent) -> SecurityEventResponse:
+    return SecurityEventResponse(
+        event_id=event.event_id, timestamp=event.timestamp, source=event.source, event_type=event.event_type,
+        source_ip=event.source_ip, destination_ip=event.destination_ip, source_port=event.source_port,
+        destination_port=event.destination_port, protocol=event.protocol, bytes_count=event.bytes_count,
+        packets_count=event.packets_count, metadata=dict(event.metadata),
     )
 
 
 @router.get("/monitoring/status", response_model=MonitoringStatusResponse)
 def monitoring_status(request: Request) -> MonitoringStatusResponse:
     return _status_response(_services(request))
+
+
+@router.get("/monitoring/interfaces", response_model=list[CaptureInterfaceResponse])
+def monitoring_interfaces(request: Request) -> list[dict[str, object]]:
+    try:
+        return _services(request).monitoring.available_interfaces()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
 
 @router.post("/monitoring/start", response_model=MonitoringStatusResponse)
@@ -138,6 +164,18 @@ def wifi_security(request: Request) -> WifiSecurityResponse:
         secure=current.secure,
         summary=current.summary,
     )
+
+
+@router.post("/events", response_model=EventIngestionResponse, status_code=status.HTTP_202_ACCEPTED)
+def ingest_event(request: Request, body: SecurityEventRequest) -> EventIngestionResponse:
+    event = SecurityEvent(**body.model_dump())
+    result = _services(request).event_ingestion.ingest(event)
+    return EventIngestionResponse(event=_event_response(result.event), alerts=[_alert_response(alert) for alert in result.alerts])
+
+
+@router.get("/events/recent", response_model=list[SecurityEventResponse])
+def recent_events(request: Request, limit: int = Query(default=100, ge=1, le=500)) -> list[SecurityEventResponse]:
+    return [_event_response(event) for event in _services(request).event_ingestion.recent(limit)]
 
 
 @router.get("/alerts/recent", response_model=list[AlertResponse])

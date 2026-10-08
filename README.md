@@ -1,6 +1,13 @@
 # Network Sentinel
 
-Local real-time network traffic analyzer and rule-based IDS.
+Beginner-friendly, modular Security Monitoring / Mini-SOC platform. Packet
+capture is one optional input—not the foundation of the product.
+
+It accepts normalized security events from packet capture, Zeek, Suricata,
+Windows authentication logs, or synthetic/test data. Python then applies
+transparent detections and correlation, stores evidence locally, and exposes it
+to the live dashboard and API. Every alert includes its reason, confidence, and
+a recommended first investigation step. See [the architecture guide](docs/ARCHITECTURE.md).
 
 ## Development setup
 
@@ -29,6 +36,25 @@ classify malicious domains.
 See `docs/AI_HANDOFF.md` for the small set of files another coding agent should
 read before modifying detection behavior.
 
+The source-neutral intake also supports repeated authentication failures,
+suspicious success-after-failure sequences, Suricata signature alerts, and Zeek
+notices. They are submitted through `POST /api/events`; `GET /api/events/recent`
+lists stored event evidence.
+
+## Configure data sources
+
+[`config.yaml`](config.yaml) is the main configuration file. It chooses enabled
+inputs and sets thresholds without hardcoding an interface, operating system,
+database filename, or detection setting in the rules. Environment variables
+still override it for deployment, for example `CAPTURE_INTERFACE=Wi-Fi`.
+
+Zeek and Suricata are **not installed automatically**. Their normalizers are
+ready for their JSON records, but keeping them disabled makes this first version
+small and safe to run. Node-RED is also optional: import
+[`docs/integrations/node-red-flow.json`](docs/integrations/node-red-flow.json)
+to expose a webhook that forwards normalized events to `POST /api/events`.
+The Python engine works normally when Node-RED is absent.
+
 ## Run the backend API
 
 ```powershell
@@ -44,6 +70,14 @@ Key endpoints: `POST /api/monitoring/start`, `POST /api/monitoring/stop`,
 `GET /api/traffic/top-ips`, `GET /api/traffic/top-ports`,
 `GET /api/traffic/connections`, `GET /api/alerts/recent`,
 `GET /api/alerts/history`, and `GET /api/alerts/{alert_id}`.
+Use `GET /api/monitoring/interfaces` to identify the exact Npcap adapter name
+when setting `CAPTURE_INTERFACE`. The `network_name` field is the exact Npcap
+device identifier; the friendly `name` (for example, `Wi-Fi`) is accepted too.
+
+For non-capture sources, use `POST /api/events` with a `timestamp`, `source`,
+and `event_type`; IP, ports, protocol, counts, and `metadata` are optional.
+This is the public ingestion interface for Zeek/Suricata/Windows log adapters,
+synthetic events, or Node-RED.
 
 ## Run the dashboard and live monitoring
 
@@ -53,6 +87,12 @@ Administrator** in this project folder and run:
 
 ```powershell
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+Or, from a normal PowerShell window, start the supplied elevated launcher:
+
+```powershell
+Start-Process powershell -Verb RunAs -ArgumentList '-ExecutionPolicy Bypass -File .\scripts\start_network_sentinel_admin.ps1'
 ```
 
 Open `http://127.0.0.1:8000/`. Press **Start monitoring**. If Npcap, an

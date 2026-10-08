@@ -1,0 +1,14 @@
+[
+  {
+    "id": "sentinel-in", "type": "http in", "z": "network-sentinel", "name": "Receive normalized security event", "url": "/network-sentinel/events", "method": "post", "upload": false, "swaggerDoc": "", "x": 180, "y": 120, "wires": [["sentinel-validate"]]
+  },
+  {
+    "id": "sentinel-validate", "type": "function", "z": "network-sentinel", "name": "Validate event envelope", "func": "const required = ['timestamp', 'source', 'event_type'];\nfor (const key of required) {\n  if (!msg.payload || !msg.payload[key]) {\n    msg.statusCode = 400;\n    msg.payload = { detail: `Missing ${key}` };\n    return [null, msg];\n  }\n}\nreturn [msg, null];", "outputs": 2, "timeout": 0, "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 410, "y": 120, "wires": [["sentinel-api"], ["sentinel-response"]]
+  },
+  {
+    "id": "sentinel-api", "type": "http request", "z": "network-sentinel", "name": "Send to Network Sentinel", "method": "POST", "ret": "obj", "paytoqs": "ignore", "url": "http://127.0.0.1:8000/api/events", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 650, "y": 100, "wires": [["sentinel-response"]]
+  },
+  {
+    "id": "sentinel-response", "type": "http response", "z": "network-sentinel", "name": "Return alert result", "statusCode": "", "headers": {}, "x": 880, "y": 120, "wires": []
+  }
+]

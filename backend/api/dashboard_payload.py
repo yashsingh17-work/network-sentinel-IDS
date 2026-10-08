@@ -19,6 +19,9 @@ def alert_payload(alert: Alert) -> dict[str, Any]:
         "observed_value": alert.observed_value,
         "threshold": alert.threshold,
         "evidence": alert.evidence,
+        "confidence": alert.confidence,
+        "recommended_investigation": alert.recommended_investigation,
+        "source": alert.source,
     }
 
 
@@ -35,6 +38,7 @@ def dashboard_payload(services: ApplicationServices) -> dict[str, Any]:
                 "capture_ready": status.capture_ready,
                 "interface": status.interface,
                 "last_error": status.last_error,
+                "packets_captured": status.packets_captured,
             },
             "overall": {
                 "total_packets": snapshot.total_packets,

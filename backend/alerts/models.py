@@ -19,3 +19,6 @@ class Alert:
     observed_value: float
     threshold: float
     evidence: str
+    confidence: float = 0.7
+    recommended_investigation: str = "Review the evidence, validate the activity with the asset owner, and check related events."
+    source: str = "python_detection"

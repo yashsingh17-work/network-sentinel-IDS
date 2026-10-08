@@ -22,6 +22,7 @@ class MonitoringStatus:
     capture_ready: bool
     interface: str | None
     last_error: str | None
+    packets_captured: int
 
 
 class MonitoringService:
@@ -81,7 +82,12 @@ class MonitoringService:
                 capture_ready=capture_status.running,
                 interface=capture_status.interface,
                 last_error=capture_status.error,
+                packets_captured=capture_status.packets_captured,
             )
+
+    def available_interfaces(self) -> list[dict[str, object]]:
+        interfaces = getattr(self._capture, "available_interfaces", None)
+        return interfaces() if callable(interfaces) else []
 
     def process_raw(self, raw_packet: object) -> list[Alert]:
         parsed = raw_packet if isinstance(raw_packet, NormalizedPacket) else self._parser.parse(raw_packet)
@@ -92,6 +98,15 @@ class MonitoringService:
         with self._lock:
             if not self._active:
                 return []
+        return self.ingest_normalized(packet)
+
+    def ingest_normalized(self, packet: NormalizedPacket) -> list[Alert]:
+        """Ingest normalized network telemetry from any enabled source.
+
+        Unlike ``process``, this method is not tied to the live packet-capture
+        button, so file-based Zeek/Suricata imports and synthetic tests can use
+        exactly the same analyzer and rules.
+        """
         self._analyzer.ingest(packet)
         self._device_tracker.ingest(packet)
         alerts = self._alert_manager.create_from_findings(self._detector.analyze(packet))

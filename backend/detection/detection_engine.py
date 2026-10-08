@@ -12,9 +12,10 @@ from backend.config import Settings
 from backend.models import NormalizedPacket
 
 DetectionType = Literal[
-    "PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY", "ARP_SPOOFING_SUSPECTED"
+    "PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY", "ARP_SPOOFING_SUSPECTED",
+    "AUTH_FAILURE_BURST", "SUSPICIOUS_AUTH_SEQUENCE", "SURICATA_SIGNATURE", "ZEEK_NETWORK_ANOMALY"
 ]
-Severity = Literal["LOW", "MEDIUM", "HIGH"]
+Severity = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +30,9 @@ class DetectionFinding:
     observed_value: float
     threshold: float
     evidence: str
+    confidence: float = 0.7
+    recommended_investigation: str = "Review the evidence, validate the activity with the asset owner, and check related events."
+    source: str = "python_detection"
 
 
 class DetectionEngine:

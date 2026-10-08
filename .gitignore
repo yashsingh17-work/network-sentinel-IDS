@@ -4,3 +4,7 @@ __pycache__/
 .venv/
 network_sentinel.db
 .env
+network-sentinel-startup.log
+network-sentinel-uvicorn.out.log
+network-sentinel-uvicorn.err.log
+.test-artifacts*/

@@ -1,6 +1,6 @@
 """Live packet capture package."""
 
-from .scapy_capture import CaptureStatus, InMemoryPacketCapture, PacketCapture, ScapyPacketCapture
+from .scapy_capture import CaptureStatus, DisabledPacketCapture, InMemoryPacketCapture, PacketCapture, ScapyPacketCapture
 from .wifi_security import WifiSecurityInspector, WifiSecurityStatus
 
-__all__ = ["CaptureStatus", "InMemoryPacketCapture", "PacketCapture", "ScapyPacketCapture", "WifiSecurityInspector", "WifiSecurityStatus"]
+__all__ = ["CaptureStatus", "DisabledPacketCapture", "InMemoryPacketCapture", "PacketCapture", "ScapyPacketCapture", "WifiSecurityInspector", "WifiSecurityStatus"]

@@ -1,0 +1,39 @@
+# Network Sentinel's portable, source-agnostic default configuration.
+sources:
+  packet_capture:
+    enabled: true
+    interface: auto
+  zeek:
+    enabled: false
+  suricata:
+    enabled: false
+  windows_events:
+    enabled: false
+  synthetic:
+    enabled: true
+
+storage:
+  backend: sqlite
+  database_path: network_sentinel.db
+
+detection:
+  port_scan_port_threshold: 50
+  port_scan_time_window_seconds: 10
+  syn_rate_threshold: 100
+  syn_time_window_seconds: 1
+  traffic_rate_threshold: 1000
+  traffic_rate_window_seconds: 1
+  icmp_sweep_destination_threshold: 20
+  icmp_sweep_time_window_seconds: 10
+  dns_query_rate_threshold: 100
+  dns_query_time_window_seconds: 10
+  arp_conflict_time_window_seconds: 120
+  arp_conflict_mac_threshold: 2
+  auth_failure_threshold: 5
+  auth_failure_time_window_seconds: 300
+  suspicious_auth_sequence_window_seconds: 600
+  alert_cooldown_seconds: 60
+
+# Optional: send normalized events to a locally managed Node-RED flow.
+orchestration:
+  node_red_webhook_url: null

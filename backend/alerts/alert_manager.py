@@ -37,6 +37,9 @@ class AlertManager:
                 observed_value=finding.observed_value,
                 threshold=finding.threshold,
                 evidence=finding.evidence,
+                confidence=finding.confidence,
+                recommended_investigation=finding.recommended_investigation,
+                source=finding.source,
             )
             saved_alert = self._repository.save(alert)
             self._recent_signatures[signature] = finding.timestamp

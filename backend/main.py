@@ -35,9 +35,11 @@ def create_app(services: ApplicationServices | None = None) -> FastAPI:
     app = FastAPI(title="Network Sentinel", version="1.0.0", lifespan=lifespan)
     app.state.services = services or build_services()
     app.state.hub = RealtimeHub()
-    app.state.services.monitoring.set_alert_callback(
-        lambda alerts: app.state.hub.publish_from_thread({"type": "alerts", "data": [alert_payload(alert) for alert in alerts]})
-    )
+    def publish_alerts(alerts):
+        app.state.hub.publish_from_thread({"type": "alerts", "data": [alert_payload(alert) for alert in alerts]})
+
+    app.state.services.monitoring.set_alert_callback(publish_alerts)
+    app.state.services.event_ingestion.set_alert_callback(publish_alerts)
     app.include_router(router)
 
     frontend = Path(__file__).resolve().parent.parent / "frontend"

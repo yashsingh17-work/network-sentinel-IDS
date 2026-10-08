@@ -33,11 +33,22 @@ class AlertRepository:
                         destination_ip TEXT,
                         observed_value REAL NOT NULL,
                         threshold REAL NOT NULL,
-                        evidence TEXT NOT NULL
+                        evidence TEXT NOT NULL,
+                        confidence REAL NOT NULL DEFAULT 0.7,
+                        recommended_investigation TEXT NOT NULL DEFAULT '',
+                        source TEXT NOT NULL DEFAULT 'python_detection'
                     )
                     """
                 )
                 connection.execute("CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp DESC)")
+                columns = {row["name"] for row in connection.execute("PRAGMA table_info(alerts)")}
+                for name, statement in {
+                    "confidence": "ALTER TABLE alerts ADD COLUMN confidence REAL NOT NULL DEFAULT 0.7",
+                    "recommended_investigation": "ALTER TABLE alerts ADD COLUMN recommended_investigation TEXT NOT NULL DEFAULT ''",
+                    "source": "ALTER TABLE alerts ADD COLUMN source TEXT NOT NULL DEFAULT 'python_detection'",
+                }.items():
+                    if name not in columns:
+                        connection.execute(statement)
         except sqlite3.Error as exc:
             raise RuntimeError(f"Unable to initialize alert database: {exc}") from exc
 
@@ -48,8 +59,8 @@ class AlertRepository:
                     """
                     INSERT INTO alerts (
                         id, timestamp, detection_type, severity, source_ip, destination_ip,
-                        observed_value, threshold, evidence
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        observed_value, threshold, evidence, confidence, recommended_investigation, source
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         alert.id,
@@ -61,6 +72,9 @@ class AlertRepository:
                         alert.observed_value,
                         alert.threshold,
                         alert.evidence,
+                        alert.confidence,
+                        alert.recommended_investigation,
+                        alert.source,
                     ),
                 )
             return alert
@@ -109,4 +123,7 @@ class AlertRepository:
             observed_value=row["observed_value"],
             threshold=row["threshold"],
             evidence=row["evidence"],
+            confidence=row["confidence"] if "confidence" in row.keys() else 0.7,
+            recommended_investigation=row["recommended_investigation"] if "recommended_investigation" in row.keys() else "",
+            source=row["source"] if "source" in row.keys() else "python_detection",
         )
