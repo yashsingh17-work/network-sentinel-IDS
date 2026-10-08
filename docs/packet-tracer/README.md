@@ -6,6 +6,11 @@ Packet Tracer does not execute this Python application or send its simulated
 packets to Npcap, so the dashboard receives matching local-only scenario events
 through its own API.
 
+Open the [visual layout](network-sentinel-lab-layout.svg) while building the
+lab in Packet Tracer. The `.pkt` file must be created and saved by Cisco Packet
+Tracer itself; it is not safe to hand-write a proprietary simulator file and
+claim that it works.
+
 ## Lab topology
 
 ```text
