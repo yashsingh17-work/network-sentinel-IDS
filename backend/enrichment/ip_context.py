@@ -5,7 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from ipaddress import ip_address
+from ipaddress import ip_address, ip_network
 import json
 import socket
 from threading import RLock
@@ -13,6 +13,9 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from backend.config import Settings
+
+
+_DOCUMENTATION_NETWORKS = tuple(ip_network(cidr) for cidr in ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"))
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +45,8 @@ class IpEnrichmentService:
             return IpContext(ip=value, label=value, status="invalid")
         if address.is_loopback:
             return IpContext(ip=value, label=f"{value} (This computer)")
+        if any(address in network for network in _DOCUMENTATION_NETWORKS):
+            return IpContext(ip=value, label=f"{value} (Documentation/demo address)")
         if address.is_private or address.is_link_local or address.is_reserved:
             return IpContext(ip=value, label=f"{value} (Private or local network)")
         if not self._settings.reverse_dns_enabled and not self._settings.country_lookup_enabled:
