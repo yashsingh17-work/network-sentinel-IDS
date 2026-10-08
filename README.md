@@ -124,3 +124,13 @@ enable it, Network Sentinel sends each public IP to the configured provider
 (default: `ipwho.is`) and caches the country result locally for 24 hours. Only
 enable that if you are comfortable sharing observed public IP addresses with
 that provider.
+
+## Alert and port detail
+
+When an alert comes from network telemetry, opening it shows the safe packet
+header context that triggered it: traffic type, protocol, TCP flags, packet
+size, source/destination ports and their common service labels, plus DNS, ICMP,
+or ARP fields when relevant. Packet payloads are never stored or shown.
+
+The **Top destination ports** list now labels familiar services such as `443
+(HTTPS)` and `22 (SSH)`. Hover a label to read its plain-language purpose.

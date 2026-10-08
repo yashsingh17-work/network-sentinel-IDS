@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from threading import RLock
-from typing import Literal
+from typing import Any, Literal
 
 from backend.config import Settings
+from backend.enrichment import describe_port
 from backend.models import NormalizedPacket
 
 DetectionType = Literal[
@@ -33,6 +34,7 @@ class DetectionFinding:
     confidence: float = 0.7
     recommended_investigation: str = "Review the evidence, validate the activity with the asset owner, and check related events."
     source: str = "python_detection"
+    context: dict[str, Any] = field(default_factory=dict)
 
 
 class DetectionEngine:
@@ -72,7 +74,8 @@ class DetectionEngine:
             if arp_conflict is not None:
                 findings.append(arp_conflict)
             self._prune_cooldowns(packet.timestamp)
-            return findings
+            context = self._packet_context(packet)
+            return [replace(finding, context=context) for finding in findings]
 
     def _check_port_scan(self, packet: NormalizedPacket) -> DetectionFinding | None:
         if packet.destination_port is None:
@@ -266,3 +269,42 @@ class DetectionEngine:
     @staticmethod
     def _is_initial_syn(flags: str | None) -> bool:
         return flags is not None and "S" in flags and "A" not in flags
+
+    @staticmethod
+    def _packet_context(packet: NormalizedPacket) -> dict[str, Any]:
+        """Keep safe header metadata with an alert; application payloads stay excluded."""
+        context: dict[str, Any] = {
+            "telemetry_type": _packet_type(packet),
+            "protocol": packet.protocol,
+            "packet_size_bytes": packet.size_bytes,
+            "source_ip": packet.source_ip,
+            "destination_ip": packet.destination_ip,
+        }
+        if packet.source_port is not None:
+            source = describe_port(packet.source_port)
+            context.update(source_port=source.number, source_port_label=source.label, source_port_description=source.description)
+        if packet.destination_port is not None:
+            destination = describe_port(packet.destination_port)
+            context.update(destination_port=destination.number, destination_port_label=destination.label, destination_port_description=destination.description)
+        if packet.tcp_flags:
+            context["tcp_flags"] = packet.tcp_flags
+        if packet.dns_query_name:
+            context["dns_query_name"] = packet.dns_query_name
+        if packet.icmp_type is not None:
+            context.update(icmp_type=packet.icmp_type, icmp_code=packet.icmp_code)
+        if packet.arp_operation is not None:
+            context.update(arp_operation=packet.arp_operation, arp_source_mac=packet.arp_source_mac, arp_target_mac=packet.arp_target_mac)
+        return context
+
+
+def _packet_type(packet: NormalizedPacket) -> str:
+    if packet.protocol == "TCP":
+        return f"TCP packet ({packet.tcp_flags or 'no flags'})"
+    if packet.protocol == "UDP":
+        return "UDP datagram"
+    if packet.protocol == "ICMP":
+        names = {0: "echo reply", 8: "echo request", 128: "echo request", 129: "echo reply"}
+        return f"ICMP {names.get(packet.icmp_type, 'message')}"
+    if packet.protocol == "ARP":
+        return "ARP reply" if packet.arp_operation == 2 else "ARP request"
+    return "Network packet"

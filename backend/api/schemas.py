@@ -32,6 +32,7 @@ class RankedValueResponse(BaseModel):
     value: str | int
     count: int
     label: str | None = None
+    description: str | None = None
 
 
 class TopIpsResponse(BaseModel):
@@ -65,6 +66,7 @@ class AlertResponse(BaseModel):
     confidence: float
     recommended_investigation: str
     source: str
+    context: dict[str, Any]
 
 
 class AlertHistoryResponse(BaseModel):

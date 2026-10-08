@@ -40,6 +40,7 @@ class AlertManager:
                 confidence=finding.confidence,
                 recommended_investigation=finding.recommended_investigation,
                 source=finding.source,
+                context=finding.context,
             )
             saved_alert = self._repository.save(alert)
             self._recent_signatures[signature] = finding.timestamp

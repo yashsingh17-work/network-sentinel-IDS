@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from backend.alerts import Alert
+from backend.enrichment import describe_port
 from backend.services import ApplicationServices
 
 
@@ -22,6 +23,7 @@ def alert_payload(alert: Alert) -> dict[str, Any]:
         "confidence": alert.confidence,
         "recommended_investigation": alert.recommended_investigation,
         "source": alert.source,
+        "context": alert.context,
     }
 
 
@@ -50,7 +52,7 @@ def dashboard_payload(services: ApplicationServices) -> dict[str, Any]:
             "protocols": snapshot.protocols,
             "top_sources": [_ranked_ip(item.value, item.count, services) for item in snapshot.top_source_ips],
             "top_destinations": [_ranked_ip(item.value, item.count, services) for item in snapshot.top_destination_ips],
-            "top_ports": [item.__dict__ if hasattr(item, "__dict__") else {"value": item.value, "count": item.count} for item in snapshot.top_destination_ports],
+            "top_ports": [_ranked_port(item.value, item.count) for item in snapshot.top_destination_ports],
             "connections": {"active_connections": snapshot.connections.active_connections, "total_connections_seen": snapshot.connections.total_connections_seen},
             "devices": [
                 {
@@ -81,3 +83,10 @@ def _ranked_ip(value: str | int, count: int, services: ApplicationServices) -> d
         "count": count,
         "label": services.enrichment.describe(value).label if isinstance(value, str) else None,
     }
+
+
+def _ranked_port(value: str | int, count: int) -> dict[str, Any]:
+    if not isinstance(value, int):
+        return {"value": value, "count": count, "label": str(value), "description": None}
+    port = describe_port(value)
+    return {"value": value, "count": count, "label": port.label, "description": port.description}

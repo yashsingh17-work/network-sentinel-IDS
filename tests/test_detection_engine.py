@@ -40,6 +40,8 @@ def test_detects_port_scan_and_explains_it() -> None:
     finding = findings[0]
     assert (finding.detection_type, finding.observed_value, finding.threshold) == ("PORT_SCAN", 3, 3)
     assert "3 unique destination ports" in finding.evidence
+    assert finding.context["telemetry_type"] == "TCP packet (PA)"
+    assert finding.context["destination_port_label"] == "22 (SSH)"
 
 
 def test_detects_high_initial_syn_rate_but_not_syn_ack() -> None:

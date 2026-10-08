@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -36,7 +37,8 @@ class AlertRepository:
                         evidence TEXT NOT NULL,
                         confidence REAL NOT NULL DEFAULT 0.7,
                         recommended_investigation TEXT NOT NULL DEFAULT '',
-                        source TEXT NOT NULL DEFAULT 'python_detection'
+                        source TEXT NOT NULL DEFAULT 'python_detection',
+                        context_json TEXT NOT NULL DEFAULT '{}'
                     )
                     """
                 )
@@ -46,6 +48,7 @@ class AlertRepository:
                     "confidence": "ALTER TABLE alerts ADD COLUMN confidence REAL NOT NULL DEFAULT 0.7",
                     "recommended_investigation": "ALTER TABLE alerts ADD COLUMN recommended_investigation TEXT NOT NULL DEFAULT ''",
                     "source": "ALTER TABLE alerts ADD COLUMN source TEXT NOT NULL DEFAULT 'python_detection'",
+                    "context_json": "ALTER TABLE alerts ADD COLUMN context_json TEXT NOT NULL DEFAULT '{}'",
                 }.items():
                     if name not in columns:
                         connection.execute(statement)
@@ -59,8 +62,8 @@ class AlertRepository:
                     """
                     INSERT INTO alerts (
                         id, timestamp, detection_type, severity, source_ip, destination_ip,
-                        observed_value, threshold, evidence, confidence, recommended_investigation, source
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        observed_value, threshold, evidence, confidence, recommended_investigation, source, context_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         alert.id,
@@ -75,6 +78,7 @@ class AlertRepository:
                         alert.confidence,
                         alert.recommended_investigation,
                         alert.source,
+                        json.dumps(alert.context, default=str),
                     ),
                 )
             return alert
@@ -126,4 +130,5 @@ class AlertRepository:
             confidence=row["confidence"] if "confidence" in row.keys() else 0.7,
             recommended_investigation=row["recommended_investigation"] if "recommended_investigation" in row.keys() else "",
             source=row["source"] if "source" in row.keys() else "python_detection",
+            context=json.loads(row["context_json"]) if "context_json" in row.keys() and row["context_json"] else {},
         )

@@ -48,6 +48,7 @@ def test_monitoring_lifecycle_and_traffic_endpoints(tmp_path) -> None:
     assert client.get("/api/traffic/protocols").json()["protocols"] == {"TCP": 1}
     assert client.get("/api/traffic/top-ips").json()["sources"][0]["value"] == "10.0.0.10"
     assert client.get("/api/traffic/top-ports").json()["destinations"][0]["value"] == 443
+    assert client.get("/api/traffic/top-ports").json()["destinations"][0]["label"] == "443 (HTTPS)"
     assert client.get("/api/traffic/connections").json()["active_connections"] == 1
     assert client.post("/api/monitoring/stop").json()["active"] is False
 
@@ -66,4 +67,5 @@ def test_alert_endpoints_return_history_and_details(tmp_path) -> None:
     assert recent.json()[0]["detection_type"] == "PORT_SCAN"
     assert history.json()["alerts"][0]["id"] == generated[0].id
     assert details.json()["evidence"]
+    assert details.json()["context"]["destination_port_label"] == "443 (HTTPS)"
     assert client.get("/api/alerts/missing").status_code == 404

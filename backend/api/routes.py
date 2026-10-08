@@ -25,6 +25,7 @@ from backend.api.schemas import (
 )
 from backend.database import AlertNotFoundError
 from backend.events import SecurityEvent
+from backend.enrichment import describe_port
 from backend.sources import WindowsEventReadError
 from backend.services import ApplicationServices
 
@@ -62,6 +63,7 @@ def _alert_response(alert: Alert) -> AlertResponse:
         confidence=alert.confidence,
         recommended_investigation=alert.recommended_investigation,
         source=alert.source,
+        context=alert.context,
     )
 
 
@@ -133,7 +135,17 @@ def top_ips(request: Request) -> TopIpsResponse:
 @router.get("/traffic/top-ports", response_model=TopPortsResponse)
 def top_ports(request: Request) -> TopPortsResponse:
     snapshot = _services(request).analyzer.snapshot()
-    return TopPortsResponse(destinations=[RankedValueResponse(value=item.value, count=item.count) for item in snapshot.top_destination_ports])
+    return TopPortsResponse(
+        destinations=[
+            RankedValueResponse(
+                value=item.value,
+                count=item.count,
+                label=describe_port(item.value).label,
+                description=describe_port(item.value).description,
+            )
+            for item in snapshot.top_destination_ports
+        ]
+    )
 
 
 @router.get("/traffic/connections", response_model=ConnectionStatisticsResponse)
