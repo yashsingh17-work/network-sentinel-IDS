@@ -12,7 +12,10 @@ from backend.database import AlertRepository, EventRepository
 from backend.detection import DetectionEngine
 from backend.services.monitoring_service import MonitoringService
 from backend.services.event_ingestion_service import EventIngestionService
+from backend.services.demo_service import DemoService
 from backend.parser import PacketParser
+from backend.services.windows_import_service import WindowsImportService
+from backend.sources import WindowsEventNormalizer, WindowsSecurityEventReader
 
 
 @dataclass(slots=True)
@@ -26,6 +29,8 @@ class ApplicationServices:
     alert_manager: AlertManager
     monitoring: MonitoringService
     event_ingestion: EventIngestionService
+    demo: DemoService
+    windows_import: WindowsImportService
     wifi_security: WifiSecurityInspector
 
 
@@ -48,6 +53,7 @@ def build_services(settings: Settings | None = None, capture: PacketCapture | No
         capture or (ScapyPacketCapture() if resolved_settings.packet_capture_enabled else DisabledPacketCapture()),
         resolved_settings.capture_interface,
     )
+    event_ingestion = EventIngestionService(event_repository, alert_manager, monitoring, resolved_settings)
     return ApplicationServices(
         settings=resolved_settings,
         analyzer=analyzer,
@@ -57,6 +63,8 @@ def build_services(settings: Settings | None = None, capture: PacketCapture | No
         event_repository=event_repository,
         alert_manager=alert_manager,
         monitoring=monitoring,
-        event_ingestion=EventIngestionService(event_repository, alert_manager, monitoring, resolved_settings),
+        event_ingestion=event_ingestion,
+        demo=DemoService(event_ingestion, resolved_settings),
+        windows_import=WindowsImportService(WindowsSecurityEventReader(), WindowsEventNormalizer(), event_ingestion),
         wifi_security=WifiSecurityInspector(resolved_settings),
     )

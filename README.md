@@ -105,3 +105,9 @@ protocols, active connections, explainable security alerts, observed devices,
 ARP-conflict warnings, and a read-only local Wi-Fi security posture. An ARP
 warning is evidence to investigate, never automatic proof that a device is
 malicious.
+
+Use **Run safe demo** to populate the dashboard with local synthetic port-scan,
+authentication, Zeek, and Suricata examples. It does not scan, contact, or send
+traffic to any device. **Import Windows logins** reads only recent Windows
+Security events 4624 and 4625; Windows may require an elevated server process
+to allow that read.

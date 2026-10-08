@@ -61,3 +61,12 @@ def test_event_api_turns_suricata_signature_into_explainable_alert(tmp_path) -> 
     assert alert["detection_type"] == "SURICATA_SIGNATURE"
     assert alert["severity"] == "HIGH"
     assert "Potential exploit" in alert["evidence"]
+
+
+def test_safe_demo_creates_local_investigation_data(tmp_path) -> None:
+    with _client(tmp_path) as client:
+        response = client.post("/api/demo/run")
+
+    assert response.status_code == 200
+    detections = {alert["detection_type"] for alert in response.json()["alerts"]}
+    assert {"PORT_SCAN", "AUTH_FAILURE_BURST", "SUSPICIOUS_AUTH_SEQUENCE", "SURICATA_SIGNATURE", "ZEEK_NETWORK_ANOMALY"} <= detections

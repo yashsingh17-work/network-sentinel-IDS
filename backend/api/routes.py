@@ -19,11 +19,13 @@ from backend.api.schemas import (
     WifiSecurityResponse,
     CaptureInterfaceResponse,
     EventIngestionResponse,
+    EventBatchResponse,
     SecurityEventRequest,
     SecurityEventResponse,
 )
 from backend.database import AlertNotFoundError
 from backend.events import SecurityEvent
+from backend.sources import WindowsEventReadError
 from backend.services import ApplicationServices
 
 
@@ -176,6 +178,23 @@ def ingest_event(request: Request, body: SecurityEventRequest) -> EventIngestion
 @router.get("/events/recent", response_model=list[SecurityEventResponse])
 def recent_events(request: Request, limit: int = Query(default=100, ge=1, le=500)) -> list[SecurityEventResponse]:
     return [_event_response(event) for event in _services(request).event_ingestion.recent(limit)]
+
+
+@router.post("/demo/run", response_model=EventBatchResponse)
+def run_safe_demo(request: Request) -> EventBatchResponse:
+    """Generate local synthetic records only; it never sends network traffic."""
+    result = _services(request).demo.run()
+    return EventBatchResponse(events_created=result.events_created, alerts=[_alert_response(alert) for alert in result.alerts])
+
+
+@router.post("/sources/windows-events/import", response_model=EventBatchResponse)
+def import_windows_events(request: Request, limit: int = Query(default=100, ge=1, le=500)) -> EventBatchResponse:
+    """Read recent successful/failed Windows authentications without changing the event log."""
+    try:
+        result = _services(request).windows_import.import_recent(limit)
+    except WindowsEventReadError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    return EventBatchResponse(events_created=result.events_imported, alerts=[_alert_response(alert) for alert in result.alerts])
 
 
 @router.get("/alerts/recent", response_model=list[AlertResponse])

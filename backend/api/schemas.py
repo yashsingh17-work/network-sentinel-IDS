@@ -120,3 +120,8 @@ class SecurityEventResponse(SecurityEventRequest):
 class EventIngestionResponse(BaseModel):
     event: SecurityEventResponse
     alerts: list[AlertResponse]
+
+
+class EventBatchResponse(BaseModel):
+    events_created: int
+    alerts: list[AlertResponse]
