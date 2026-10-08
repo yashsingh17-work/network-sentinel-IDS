@@ -8,12 +8,13 @@ from backend.alerts import AlertManager
 from backend.analyzer import DeviceTracker, TrafficAnalyzer
 from backend.capture import DisabledPacketCapture, PacketCapture, ScapyPacketCapture, WifiSecurityInspector
 from backend.config import Settings
-from backend.database import AlertRepository, EventRepository
+from backend.database import AlertRepository, DeviceProfileRepository, EventRepository
 from backend.detection import DetectionEngine
 from backend.enrichment import IpEnrichmentService
 from backend.services.monitoring_service import MonitoringService
 from backend.services.event_ingestion_service import EventIngestionService
 from backend.services.demo_service import DemoService
+from backend.services.packet_tracer_demo_service import PacketTracerDemoService
 from backend.parser import PacketParser
 from backend.services.windows_import_service import WindowsImportService
 from backend.sources import WindowsEventNormalizer, WindowsSecurityEventReader
@@ -27,10 +28,12 @@ class ApplicationServices:
     detector: DetectionEngine
     repository: AlertRepository
     event_repository: EventRepository
+    device_profiles: DeviceProfileRepository
     alert_manager: AlertManager
     monitoring: MonitoringService
     event_ingestion: EventIngestionService
     demo: DemoService
+    packet_tracer_demo: PacketTracerDemoService
     windows_import: WindowsImportService
     enrichment: IpEnrichmentService
     wifi_security: WifiSecurityInspector
@@ -42,6 +45,8 @@ def build_services(settings: Settings | None = None, capture: PacketCapture | No
     repository.initialize()
     event_repository = EventRepository(resolved_settings.database_path)
     event_repository.initialize()
+    device_profiles = DeviceProfileRepository(resolved_settings.database_path)
+    device_profiles.initialize()
     analyzer = TrafficAnalyzer(resolved_settings)
     device_tracker = DeviceTracker(resolved_settings)
     detector = DetectionEngine(resolved_settings)
@@ -63,10 +68,12 @@ def build_services(settings: Settings | None = None, capture: PacketCapture | No
         detector=detector,
         repository=repository,
         event_repository=event_repository,
+        device_profiles=device_profiles,
         alert_manager=alert_manager,
         monitoring=monitoring,
         event_ingestion=event_ingestion,
         demo=DemoService(event_ingestion, resolved_settings),
+        packet_tracer_demo=PacketTracerDemoService(event_ingestion, resolved_settings),
         windows_import=WindowsImportService(WindowsSecurityEventReader(), WindowsEventNormalizer(), event_ingestion),
         enrichment=IpEnrichmentService(resolved_settings),
         wifi_security=WifiSecurityInspector(resolved_settings),

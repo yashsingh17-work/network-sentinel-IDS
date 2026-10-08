@@ -82,6 +82,16 @@ class ObservedDeviceResponse(BaseModel):
     last_seen: datetime
     packets_seen: int
     protocols: dict[str, int]
+    vendor: str | None = None
+    likely_role: str
+    observed_services: list[str]
+    display_name: str | None = None
+    physical_location: str | None = None
+
+
+class DeviceProfileRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=100)
+    physical_location: str | None = Field(default=None, max_length=160)
 
 
 class WifiSecurityResponse(BaseModel):
@@ -128,3 +138,14 @@ class EventIngestionResponse(BaseModel):
 class EventBatchResponse(BaseModel):
     events_created: int
     alerts: list[AlertResponse]
+
+
+class PacketTracerScenarioResponse(BaseModel):
+    scenario_id: str
+    title: str
+    description: str
+    packet_tracer_action: str
+
+
+class PacketTracerScenarioRunResponse(EventBatchResponse):
+    scenario: PacketTracerScenarioResponse

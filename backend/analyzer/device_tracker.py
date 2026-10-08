@@ -8,6 +8,7 @@ from threading import RLock
 
 from backend.config import Settings
 from backend.models import NormalizedPacket
+from backend.analyzer.device_identity import likely_role, mac_vendor, observed_service_labels
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +19,9 @@ class ObservedDevice:
     last_seen: datetime
     packets_seen: int
     protocols: dict[str, int]
+    vendor: str | None
+    likely_role: str
+    observed_services: list[str]
 
 
 @dataclass(slots=True)
@@ -27,6 +31,7 @@ class _MutableDevice:
     packets_seen: int = 0
     ip_addresses: set[str] = field(default_factory=set)
     protocols: dict[str, int] = field(default_factory=dict)
+    source_ports: dict[int, int] = field(default_factory=dict)
 
 
 class DeviceTracker:
@@ -52,6 +57,8 @@ class DeviceTracker:
             existing.last_seen = packet.timestamp
             existing.packets_seen += 1
             existing.protocols[packet.protocol] = existing.protocols.get(packet.protocol, 0) + 1
+            if packet.source_port is not None:
+                existing.source_ports[packet.source_port] = existing.source_ports.get(packet.source_port, 0) + 1
             for address in (packet.source_ip, packet.arp_source_ip):
                 if address and address != "0.0.0.0":
                     existing.ip_addresses.add(address)
@@ -71,6 +78,9 @@ class DeviceTracker:
                     last_seen=device.last_seen,
                     packets_seen=device.packets_seen,
                     protocols=dict(device.protocols),
+                    vendor=mac_vendor(mac),
+                    likely_role=likely_role(sorted(device.ip_addresses), device.source_ports),
+                    observed_services=observed_service_labels(device.source_ports),
                 )
                 for mac, device in sorted(self._devices.items(), key=lambda entry: entry[1].last_seen, reverse=True)
             ]

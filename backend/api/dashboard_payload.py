@@ -31,6 +31,7 @@ def dashboard_payload(services: ApplicationServices) -> dict[str, Any]:
     snapshot = services.analyzer.snapshot()
     status = services.monitoring.status()
     wifi = services.wifi_security.status()
+    profiles = services.device_profiles.profiles()
     return {
         "type": "dashboard_update",
         "data": {
@@ -61,6 +62,11 @@ def dashboard_payload(services: ApplicationServices) -> dict[str, Any]:
                     "last_seen": device.last_seen.isoformat(),
                     "packets_seen": device.packets_seen,
                     "protocols": device.protocols,
+                    "vendor": device.vendor,
+                    "likely_role": device.likely_role,
+                    "observed_services": device.observed_services,
+                    "display_name": profiles.get(device.mac_address.lower()).display_name if device.mac_address.lower() in profiles else None,
+                    "physical_location": profiles.get(device.mac_address.lower()).physical_location if device.mac_address.lower() in profiles else None,
                 }
                 for device in services.device_tracker.snapshot()
             ],

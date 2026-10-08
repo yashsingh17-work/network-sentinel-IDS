@@ -16,10 +16,13 @@ from backend.api.schemas import (
     TopIpsResponse,
     TopPortsResponse,
     ObservedDeviceResponse,
+    DeviceProfileRequest,
     WifiSecurityResponse,
     CaptureInterfaceResponse,
     EventIngestionResponse,
     EventBatchResponse,
+    PacketTracerScenarioResponse,
+    PacketTracerScenarioRunResponse,
     SecurityEventRequest,
     SecurityEventResponse,
 )
@@ -159,6 +162,7 @@ def connection_statistics(request: Request) -> ConnectionStatisticsResponse:
 
 @router.get("/devices", response_model=list[ObservedDeviceResponse])
 def observed_devices(request: Request) -> list[ObservedDeviceResponse]:
+    profiles = _services(request).device_profiles.profiles()
     return [
         ObservedDeviceResponse(
             mac_address=device.mac_address,
@@ -167,9 +171,32 @@ def observed_devices(request: Request) -> list[ObservedDeviceResponse]:
             last_seen=device.last_seen,
             packets_seen=device.packets_seen,
             protocols=device.protocols,
+            vendor=device.vendor,
+            likely_role=device.likely_role,
+            observed_services=device.observed_services,
+            display_name=profiles.get(device.mac_address.lower()).display_name if device.mac_address.lower() in profiles else None,
+            physical_location=profiles.get(device.mac_address.lower()).physical_location if device.mac_address.lower() in profiles else None,
         )
         for device in _services(request).device_tracker.snapshot()
     ]
+
+
+@router.put("/devices/{mac_address}/profile", response_model=ObservedDeviceResponse)
+def update_device_profile(request: Request, mac_address: str, body: DeviceProfileRequest) -> ObservedDeviceResponse:
+    """Store a human-provided name/location; physical location is never inferred from packets."""
+    normalized = mac_address.lower().replace("-", ":")
+    profile = _services(request).device_profiles.upsert(
+        normalized, body.display_name.strip() if body.display_name else None,
+        body.physical_location.strip() if body.physical_location else None,
+    )
+    device = next((item for item in _services(request).device_tracker.snapshot() if item.mac_address.lower() == normalized), None)
+    if device is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device has not been observed in captured traffic.")
+    return ObservedDeviceResponse(
+        mac_address=device.mac_address, ip_addresses=device.ip_addresses, first_seen=device.first_seen, last_seen=device.last_seen,
+        packets_seen=device.packets_seen, protocols=device.protocols, vendor=device.vendor, likely_role=device.likely_role,
+        observed_services=device.observed_services, display_name=profile.display_name, physical_location=profile.physical_location,
+    )
 
 
 @router.get("/wifi/security", response_model=WifiSecurityResponse)
@@ -203,6 +230,31 @@ def run_safe_demo(request: Request) -> EventBatchResponse:
     """Generate local synthetic records only; it never sends network traffic."""
     result = _services(request).demo.run()
     return EventBatchResponse(events_created=result.events_created, alerts=[_alert_response(alert) for alert in result.alerts])
+
+
+def _packet_tracer_scenario_response(scenario: object) -> PacketTracerScenarioResponse:
+    return PacketTracerScenarioResponse(
+        scenario_id=scenario.scenario_id, title=scenario.title, description=scenario.description,
+        packet_tracer_action=scenario.packet_tracer_action,
+    )
+
+
+@router.get("/demo/packet-tracer/scenarios", response_model=list[PacketTracerScenarioResponse])
+def packet_tracer_scenarios(request: Request) -> list[PacketTracerScenarioResponse]:
+    return [_packet_tracer_scenario_response(item) for item in _services(request).packet_tracer_demo.scenarios()]
+
+
+@router.post("/demo/packet-tracer/{scenario_id}", response_model=PacketTracerScenarioRunResponse)
+def run_packet_tracer_scenario(request: Request, scenario_id: str) -> PacketTracerScenarioRunResponse:
+    """Create only local, labelled records that match a Packet Tracer lab scene."""
+    try:
+        result = _services(request).packet_tracer_demo.run(scenario_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return PacketTracerScenarioRunResponse(
+        scenario=_packet_tracer_scenario_response(result.scenario), events_created=result.events_created,
+        alerts=[_alert_response(alert) for alert in result.alerts],
+    )
 
 
 @router.post("/sources/windows-events/import", response_model=EventBatchResponse)

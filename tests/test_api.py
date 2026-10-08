@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
@@ -69,3 +70,36 @@ def test_alert_endpoints_return_history_and_details(tmp_path) -> None:
     assert details.json()["evidence"]
     assert details.json()["context"]["destination_port_label"] == "443 (HTTPS)"
     assert client.get("/api/alerts/missing").status_code == 404
+
+
+def test_packet_tracer_scenarios_are_local_and_explainable(tmp_path) -> None:
+    client, _ = client_and_services(tmp_path)
+
+    scenarios = client.get("/api/demo/packet-tracer/scenarios")
+    run = client.post("/api/demo/packet-tracer/dmz-port-scan")
+
+    assert scenarios.status_code == 200
+    assert {item["scenario_id"] for item in scenarios.json()} >= {"dmz-port-scan", "arp-conflict"}
+    assert run.status_code == 200
+    assert run.json()["scenario"]["scenario_id"] == "dmz-port-scan"
+    assert run.json()["events_created"] == 2
+    assert run.json()["alerts"][0]["detection_type"] == "PORT_SCAN"
+
+
+def test_observed_device_profile_is_user_provided(tmp_path) -> None:
+    client, services = client_and_services(tmp_path)
+    client.post("/api/monitoring/start")
+    observed = packet(443)
+    observed = replace(observed, source_mac="00:25:96:aa:10:01")
+    services.monitoring.process(observed)
+
+    response = client.put(
+        "/api/devices/00:25:96:aa:10:01/profile",
+        json={"display_name": "Lab web server", "physical_location": "Lab A rack"},
+    )
+    device = client.get("/api/devices").json()[0]
+
+    assert response.status_code == 200
+    assert device["vendor"] == "Cisco Systems"
+    assert device["display_name"] == "Lab web server"
+    assert device["physical_location"] == "Lab A rack"
