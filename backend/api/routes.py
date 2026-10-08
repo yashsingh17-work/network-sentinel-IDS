@@ -74,6 +74,11 @@ def _event_response(event: SecurityEvent) -> SecurityEventResponse:
     )
 
 
+def _ranked_response(value: str | int, count: int, services: ApplicationServices) -> RankedValueResponse:
+    label = services.enrichment.describe(value).label if isinstance(value, str) else None
+    return RankedValueResponse(value=value, count=count, label=label)
+
+
 @router.get("/monitoring/status", response_model=MonitoringStatusResponse)
 def monitoring_status(request: Request) -> MonitoringStatusResponse:
     return _status_response(_services(request))
@@ -118,9 +123,10 @@ def protocol_statistics(request: Request) -> ProtocolStatisticsResponse:
 @router.get("/traffic/top-ips", response_model=TopIpsResponse)
 def top_ips(request: Request) -> TopIpsResponse:
     snapshot = _services(request).analyzer.snapshot()
+    services = _services(request)
     return TopIpsResponse(
-        sources=[RankedValueResponse(value=item.value, count=item.count) for item in snapshot.top_source_ips],
-        destinations=[RankedValueResponse(value=item.value, count=item.count) for item in snapshot.top_destination_ips],
+        sources=[_ranked_response(item.value, item.count, services) for item in snapshot.top_source_ips],
+        destinations=[_ranked_response(item.value, item.count, services) for item in snapshot.top_destination_ips],
     )
 
 

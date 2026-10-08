@@ -48,8 +48,8 @@ def dashboard_payload(services: ApplicationServices) -> dict[str, Any]:
                 "total_alerts": len(services.repository.get_recent(500)),
             },
             "protocols": snapshot.protocols,
-            "top_sources": [item.__dict__ if hasattr(item, "__dict__") else {"value": item.value, "count": item.count} for item in snapshot.top_source_ips],
-            "top_destinations": [item.__dict__ if hasattr(item, "__dict__") else {"value": item.value, "count": item.count} for item in snapshot.top_destination_ips],
+            "top_sources": [_ranked_ip(item.value, item.count, services) for item in snapshot.top_source_ips],
+            "top_destinations": [_ranked_ip(item.value, item.count, services) for item in snapshot.top_destination_ips],
             "top_ports": [item.__dict__ if hasattr(item, "__dict__") else {"value": item.value, "count": item.count} for item in snapshot.top_destination_ports],
             "connections": {"active_connections": snapshot.connections.active_connections, "total_connections_seen": snapshot.connections.total_connections_seen},
             "devices": [
@@ -72,4 +72,12 @@ def dashboard_payload(services: ApplicationServices) -> dict[str, Any]:
                 "summary": wifi.summary,
             },
         },
+    }
+
+
+def _ranked_ip(value: str | int, count: int, services: ApplicationServices) -> dict[str, Any]:
+    return {
+        "value": value,
+        "count": count,
+        "label": services.enrichment.describe(value).label if isinstance(value, str) else None,
     }

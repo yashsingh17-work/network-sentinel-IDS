@@ -43,8 +43,8 @@ def test_tracks_packet_byte_protocol_and_endpoint_statistics() -> None:
 
 def test_calculates_one_second_rolling_rates() -> None:
     subject = analyzer(rate_window_seconds=1)
-    subject.ingest(packet(timestamp=NOW - timedelta(milliseconds=500), size_bytes=100))
-    subject.ingest(packet(timestamp=NOW - timedelta(seconds=2), size_bytes=500))
+    subject.ingest(packet(timestamp=NOW - timedelta(milliseconds=500), size_bytes=100), received_at=NOW - timedelta(milliseconds=500))
+    subject.ingest(packet(timestamp=NOW - timedelta(seconds=2), size_bytes=500), received_at=NOW - timedelta(seconds=2))
 
     snapshot = subject.snapshot(NOW)
 

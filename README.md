@@ -111,3 +111,16 @@ authentication, Zeek, and Suricata examples. It does not scan, contact, or send
 traffic to any device. **Import Windows logins** reads only recent Windows
 Security events 4624 and 4625; Windows may require an elevated server process
 to allow that read.
+
+## IP names and country context
+
+Top source and destination IPs now show their cached reverse-DNS/PTR hostname
+in brackets when one is available. This uses the computer's configured DNS
+resolver and never blocks the live dashboard. Private IPs are labelled as local
+instead of being sent for lookup.
+
+Country lookup is deliberately disabled in [`config.yaml`](config.yaml). If you
+enable it, Network Sentinel sends each public IP to the configured provider
+(default: `ipwho.is`) and caches the country result locally for 24 hours. Only
+enable that if you are comfortable sharing observed public IP addresses with
+that provider.

@@ -80,13 +80,19 @@ class TrafficAnalyzer:
         self._connections: dict[tuple[str, int, str, int, str], _Connection] = {}
         self._total_connections_seen = 0
 
-    def ingest(self, packet: NormalizedPacket) -> None:
-        """Record one normalized packet. This method is safe for a capture thread."""
+    def ingest(self, packet: NormalizedPacket, received_at: datetime | None = None) -> None:
+        """Record one normalized packet using arrival time for live throughput.
+
+        Event timestamps describe when something happened. Throughput must instead
+        measure when Network Sentinel received telemetry; otherwise importing old
+        Zeek/Windows records permanently displays zero packets per second.
+        """
+        observed_at = received_at or datetime.now(timezone.utc)
         with self._lock:
             self._total_packets += 1
             self._total_bytes += packet.size_bytes
             self._protocols[packet.protocol] += 1
-            self._recent_rates.append((packet.timestamp, packet.size_bytes))
+            self._recent_rates.append((observed_at, packet.size_bytes))
             self._sources.add(packet.source_ip)
             self._destinations.add(packet.destination_ip)
             if packet.destination_port is not None:

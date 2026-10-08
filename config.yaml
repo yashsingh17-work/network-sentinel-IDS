@@ -16,6 +16,18 @@ storage:
   backend: sqlite
   database_path: network_sentinel.db
 
+dashboard:
+  # Smooth throughput over five seconds instead of flashing from a burst to zero.
+  rate_window_seconds: 5
+
+enrichment:
+  # Uses your configured DNS resolver to find PTR/host names for public IPs.
+  reverse_dns_enabled: true
+  # Disabled: enabling this sends a public IP address to the configured provider.
+  country_lookup_enabled: false
+  country_lookup_url: "https://ipwho.is/{ip}"
+  cache_seconds: 86400
+
 detection:
   port_scan_port_threshold: 50
   port_scan_time_window_seconds: 10

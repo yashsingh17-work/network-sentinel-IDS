@@ -54,7 +54,7 @@ class Settings:
     arp_conflict_time_window_seconds: int = 120
     arp_conflict_mac_threshold: int = 2
     alert_cooldown_seconds: int = 60
-    rate_window_seconds: int = 1
+    rate_window_seconds: int = 5
     history_window_seconds: int = 60
     max_tracked_endpoints: int = 500
     max_tracked_ports: int = 500
@@ -76,6 +76,10 @@ class Settings:
     synthetic_enabled: bool = True
     storage_backend: str = "sqlite"
     node_red_webhook_url: str | None = None
+    reverse_dns_enabled: bool = True
+    country_lookup_enabled: bool = False
+    country_lookup_url: str = "https://ipwho.is/{ip}"
+    ip_enrichment_cache_seconds: int = 86_400
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -83,6 +87,7 @@ class Settings:
         detection = _nested(document, "detection", default={})
         sources = _nested(document, "sources", default={})
         storage = _nested(document, "storage", default={})
+        enrichment = _nested(document, "enrichment", default={})
 
         def number(name: str, yaml_key: str, fallback: int) -> int:
             return _positive_int(name, int(detection.get(yaml_key, fallback)))
@@ -93,6 +98,12 @@ class Settings:
                 return raw.strip().lower() in {"1", "true", "yes", "on"}
             source = sources.get(source_name, {})
             return bool(source.get("enabled", fallback)) if isinstance(source, dict) else fallback
+
+        def boolean(name: str, value: Any) -> bool:
+            raw = getenv(name)
+            if raw is not None:
+                return raw.strip().lower() in {"1", "true", "yes", "on"}
+            return bool(value)
 
         capture_source = sources.get("packet_capture", {}) if isinstance(sources, dict) else {}
         return cls(
@@ -109,7 +120,7 @@ class Settings:
             arp_conflict_time_window_seconds=number("ARP_CONFLICT_TIME_WINDOW", "arp_conflict_time_window_seconds", 120),
             arp_conflict_mac_threshold=number("ARP_CONFLICT_MAC_THRESHOLD", "arp_conflict_mac_threshold", 2),
             alert_cooldown_seconds=_positive_int("ALERT_COOLDOWN", int(detection.get("alert_cooldown_seconds", 60))),
-            rate_window_seconds=_positive_int("RATE_WINDOW_SECONDS", 1),
+            rate_window_seconds=_positive_int("RATE_WINDOW_SECONDS", int(_nested(document, "dashboard", "rate_window_seconds", default=5))),
             history_window_seconds=_positive_int("HISTORY_WINDOW_SECONDS", 60),
             max_tracked_endpoints=_positive_int("MAX_TRACKED_ENDPOINTS", 500),
             max_tracked_ports=_positive_int("MAX_TRACKED_PORTS", 500),
@@ -135,4 +146,8 @@ class Settings:
             synthetic_enabled=enabled("SYNTHETIC_ENABLED", "synthetic", True),
             storage_backend=getenv("STORAGE_BACKEND", str(storage.get("backend", "sqlite"))),
             node_red_webhook_url=getenv("NODE_RED_WEBHOOK_URL") or _nested(document, "orchestration", "node_red_webhook_url", default=None),
+            reverse_dns_enabled=boolean("REVERSE_DNS_ENABLED", enrichment.get("reverse_dns_enabled", True)),
+            country_lookup_enabled=boolean("COUNTRY_LOOKUP_ENABLED", enrichment.get("country_lookup_enabled", False)),
+            country_lookup_url=getenv("COUNTRY_LOOKUP_URL", str(enrichment.get("country_lookup_url", "https://ipwho.is/{ip}"))),
+            ip_enrichment_cache_seconds=_positive_int("IP_ENRICHMENT_CACHE_SECONDS", int(enrichment.get("cache_seconds", 86_400))),
         )

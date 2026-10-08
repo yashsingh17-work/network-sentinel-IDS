@@ -31,6 +31,7 @@ class ProtocolStatisticsResponse(BaseModel):
 class RankedValueResponse(BaseModel):
     value: str | int
     count: int
+    label: str | None = None
 
 
 class TopIpsResponse(BaseModel):

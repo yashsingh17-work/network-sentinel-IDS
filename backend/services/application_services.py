@@ -10,6 +10,7 @@ from backend.capture import DisabledPacketCapture, PacketCapture, ScapyPacketCap
 from backend.config import Settings
 from backend.database import AlertRepository, EventRepository
 from backend.detection import DetectionEngine
+from backend.enrichment import IpEnrichmentService
 from backend.services.monitoring_service import MonitoringService
 from backend.services.event_ingestion_service import EventIngestionService
 from backend.services.demo_service import DemoService
@@ -31,6 +32,7 @@ class ApplicationServices:
     event_ingestion: EventIngestionService
     demo: DemoService
     windows_import: WindowsImportService
+    enrichment: IpEnrichmentService
     wifi_security: WifiSecurityInspector
 
 
@@ -66,5 +68,6 @@ def build_services(settings: Settings | None = None, capture: PacketCapture | No
         event_ingestion=event_ingestion,
         demo=DemoService(event_ingestion, resolved_settings),
         windows_import=WindowsImportService(WindowsSecurityEventReader(), WindowsEventNormalizer(), event_ingestion),
+        enrichment=IpEnrichmentService(resolved_settings),
         wifi_security=WifiSecurityInspector(resolved_settings),
     )
