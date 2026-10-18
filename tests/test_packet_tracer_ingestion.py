@@ -37,7 +37,7 @@ def _event(**changes):
 def test_packet_tracer_batch_ingestion_reaches_database_and_rules(tmp_path) -> None:
     with _client(tmp_path) as client:
         response = client.post("/api/events/ingest", json={"events": [
-            _event(dest_port=port, raw_data="TCP connection attempt") for port in (21, 22, 80)
+            _event(dest_ip="192.168.20.10", dest_port=port, raw_data="TCP SYN connection attempt") for port in (80, 445, 8080)
         ]})
         assert response.status_code == 202
         assert "PORT_SCAN" in {item["detection_type"] for item in response.json()["alerts"]}
@@ -56,14 +56,18 @@ def test_packet_tracer_single_event_shape_and_ftp_failures(tmp_path) -> None:
 def test_tcp_transport_is_classified_by_destination_port(tmp_path) -> None:
     with _client(tmp_path) as client:
         client.post("/api/events/ingest", json={"events": [
-            _event(dest_port=21), _event(dest_port=80), _event(dest_port=443),
+            _event(dest_port=port) for port in (21, 22, 53, 80, 443, 445, 8080)
         ]})
         recent = client.get("/api/events/recent").json()
         by_port = {item["destination_port"]: item["metadata"] for item in recent}
         assert by_port[21]["transport_protocol"] == "TCP"
         assert by_port[21]["likely_application_protocol"] == "FTP"
+        assert by_port[22]["likely_application_protocol"] == "SSH"
+        assert by_port[53]["likely_application_protocol"] == "DNS"
         assert by_port[80]["likely_application_protocol"] == "HTTP"
         assert by_port[443]["likely_application_protocol"] == "HTTPS"
+        assert by_port[445]["likely_application_protocol"] == "SMB"
+        assert by_port[8080]["likely_application_protocol"] == "HTTP alternate"
 
 
 def test_filtered_packet_tracer_records_survive_a_busy_live_history_buffer(tmp_path) -> None:
@@ -94,3 +98,10 @@ def test_packet_tracer_replay_uses_configured_topology_addresses() -> None:
     assert {event["dest_ip"] for event in events} == {"10.50.20.10", "10.50.20.20", "10.50.20.53"}
     assert {event["source_ip"] for event in events} == {"10.50.10.25"}
     assert {event["metadata"]["network_zone"] for event in events} == {"10.50.10.0/24"}
+    port_scan = scenario_events("port-scan", settings)
+    assert {event["dest_ip"] for event in port_scan} == {"10.50.20.10"}
+    assert {event["dest_port"] for event in port_scan} == {80, 445, 8080}
+    baseline = scenario_events("baseline-http", settings)
+    assert baseline[0]["source_ip"] == "10.50.20.10"
+    assert baseline[0]["dest_ip"] == settings.packet_tracer_dmz_web_server_ip
+    assert baseline[0]["dest_port"] == 80

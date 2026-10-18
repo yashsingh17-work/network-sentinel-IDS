@@ -11,17 +11,24 @@ storage:
   database_path: packet_tracer_network_sentinel.db
 packet_tracer:
   enabled: true
-  # Change these values when you change the Packet Tracer topology. The
-  # collector and dashboard accept any addresses; these drive lab-specific
-  # replay data and DNS/FTP/SSH rules only.
+  # Runtime values for the exact R1 / Switch A / Switch B / Switch DMZ lab
+  # documented in docs/packet-tracer/TOPOLOGY.md. The collector accepts
+  # normalized records from any address; these values drive replay and the
+  # lab-specific DNS/FTP/SSH rules only.
   attacker_network: 192.168.10.0/24
+  internal_network: 192.168.20.0/24
+  dmz_network: 192.168.30.0/24
   targets:
     attacker: 192.168.10.10
+    attacker_gateway: 192.168.10.1
     windows_target: 192.168.20.10
     linux_target: 192.168.20.20
     dns_server: 192.168.20.53
+    internal_gateway: 192.168.20.1
     dmz_web_server: 192.168.30.10
-    gateway: 192.168.20.1
+    dmz_gateway: 192.168.30.1
+    monitoring_pc: 192.168.40.10
+  monitoring_network: 192.168.40.0/24 # isolated L2 SPAN zone; no R1 interface/gateway
   authentication_targets:
     - 192.168.20.20
 detection:

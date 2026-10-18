@@ -77,14 +77,46 @@ def test_packet_tracer_scenarios_are_local_and_explainable(tmp_path) -> None:
     client, _ = client_and_services(tmp_path)
 
     scenarios = client.get("/api/demo/packet-tracer/scenarios")
-    run = client.post("/api/demo/packet-tracer/dmz-port-scan")
+    run = client.post("/api/demo/packet-tracer/tcp-port-scan")
 
     assert scenarios.status_code == 200
-    assert {item["scenario_id"] for item in scenarios.json()} >= {"dmz-port-scan", "arp-conflict"}
+    assert {item["scenario_id"] for item in scenarios.json()} >= {"icmp-sweep", "tcp-port-scan", "dns-burst", "ftp-brute-force", "arp-conflict"}
     assert run.status_code == 200
-    assert run.json()["scenario"]["scenario_id"] == "dmz-port-scan"
-    assert run.json()["events_created"] == 2
+    assert run.json()["scenario"]["scenario_id"] == "tcp-port-scan"
+    assert run.json()["events_created"] == 3
     assert run.json()["alerts"][0]["detection_type"] == "PORT_SCAN"
+
+
+def test_packet_tracer_scenes_use_the_canonical_lab_flows(tmp_path) -> None:
+    profile = Settings.from_env("config.packet-tracer.yaml")
+    services = build_services(
+        replace(profile, database_path=str(tmp_path / "canonical-lab.db"), auto_start_monitoring=False),
+        capture=InMemoryPacketCapture(),
+    )
+    client = TestClient(create_app(services))
+
+    expected_detection = {
+        "icmp-sweep": "ICMP_SWEEP",
+        "tcp-port-scan": "PORT_SCAN",
+        "dns-burst": "DNS_QUERY_ANOMALY",
+        "ftp-brute-force": "AUTH_FAILURE_BURST",
+        "arp-conflict": "ARP_SPOOFING_SUSPECTED",
+    }
+    for scenario_id, detection_type in expected_detection.items():
+        response = client.post(f"/api/demo/packet-tracer/{scenario_id}")
+        assert response.status_code == 200
+        assert response.json()["scenario"]["scenario_id"] == scenario_id
+        assert any(alert["detection_type"] == detection_type for alert in response.json()["alerts"])
+
+    ftp_packets = client.get("/api/traffic/protocols/TCP/packets?service=FTP").json()
+    assert len(ftp_packets) == profile.auth_failure_threshold
+    assert {packet["destination_port"] for packet in ftp_packets} == {21}
+    assert {packet["destination_ip"] for packet in ftp_packets} == {profile.packet_tracer_linux_target_ip}
+
+    baseline = client.post("/api/demo/packet-tracer/baseline-http")
+    assert baseline.status_code == 200
+    assert baseline.json()["events_created"] == 3
+    assert baseline.json()["alerts"] == []
 
 
 def test_observed_device_profile_is_user_provided(tmp_path) -> None:

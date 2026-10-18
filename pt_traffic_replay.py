@@ -42,8 +42,9 @@ def scenario_events(name: str, settings: Settings | None = None) -> list[dict]:
         return [event(settings, now, dest_ip=target, protocol="ICMP", raw_data="ICMP echo request", offset_ms=index * 100)
                 for index, target in enumerate((settings.packet_tracer_windows_target_ip, settings.packet_tracer_linux_target_ip, settings.packet_tracer_dns_server or settings.packet_tracer_windows_target_ip))]
     if name == "port-scan":
-        return [event(settings, now, dest_ip=settings.packet_tracer_linux_target_ip, protocol="TCP", dest_port=port, flags=["SYN"], raw_data="TCP connection attempt", offset_ms=index * 100)
-                for index, port in enumerate((21, 22, 80))]
+        # Canonical lab flow: Kali probes three different Windows_Target ports.
+        return [event(settings, now, dest_ip=settings.packet_tracer_windows_target_ip, protocol="TCP", dest_port=port, flags=["SYN"], raw_data="TCP SYN connection attempt", offset_ms=index * 100)
+                for index, port in enumerate((80, 445, 8080))]
     if name == "syn-flood":
         return [event(settings, now, dest_ip=settings.packet_tracer_windows_target_ip, protocol="TCP", dest_port=80, flags=["SYN"], raw_data="TCP SYN", offset_ms=index * 10)
                 for index in range(20)]
@@ -53,14 +54,21 @@ def scenario_events(name: str, settings: Settings | None = None) -> list[dict]:
     if name == "ftp-failures":
         return [event(settings, now, dest_ip=settings.packet_tracer_linux_target_ip, protocol="TCP", dest_port=21, raw_data="FTP 530 User cannot log in", offset_ms=index * 100)
                 for index in range(3)]
+    if name == "baseline-http":
+        # This normal flow comes from Windows_Target rather than the attacker.
+        baseline = event(settings, now, dest_ip=settings.packet_tracer_dmz_web_server_ip, protocol="TCP", dest_port=80, flags=["SYN"], raw_data="HTTP GET /", offset_ms=0)
+        baseline["source_ip"] = settings.packet_tracer_windows_target_ip
+        baseline["source_port"] = 51_000
+        baseline["metadata"] = {"device_role": "Victim", "network_zone": settings.packet_tracer_internal_network, "simulation": True}
+        return [baseline]
     if name == "all":
-        return scenario_events("icmp-sweep", settings) + scenario_events("port-scan", settings) + scenario_events("syn-flood", settings) + scenario_events("dns-burst", settings) + scenario_events("ftp-failures", settings)
+        return scenario_events("icmp-sweep", settings) + scenario_events("port-scan", settings) + scenario_events("syn-flood", settings) + scenario_events("dns-burst", settings) + scenario_events("ftp-failures", settings) + scenario_events("baseline-http", settings)
     raise ValueError(name)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Send safe local Packet Tracer lab records to Network Sentinel.")
-    parser.add_argument("scenario", choices=["icmp-sweep", "port-scan", "syn-flood", "dns-burst", "ftp-failures", "all"])
+    parser.add_argument("scenario", choices=["icmp-sweep", "port-scan", "syn-flood", "dns-burst", "ftp-failures", "baseline-http", "all"])
     parser.add_argument("--api", default=DEFAULT_API)
     args = parser.parse_args()
     settings = lab_settings()

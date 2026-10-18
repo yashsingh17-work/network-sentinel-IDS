@@ -64,7 +64,11 @@ class SecurityEvent:
     def to_packet(self) -> NormalizedPacket | None:
         """Adapt network metadata to the existing packet-analysis rules when safe."""
         protocol = (self.protocol or "").upper()
-        if self.event_type not in {"network_packet", "network_connection"} or protocol not in {"TCP", "UDP", "ICMP", "ICMPV6", "ARP"}:
+        # Authentication events with a complete transport tuple are still
+        # network telemetry. Keeping them visible lets an FTP/SSH failure show
+        # up in the live protocol, service-port, and packet-investigation
+        # views as well as in the authentication alert feed.
+        if self.event_type not in {"network_packet", "network_connection", "authentication_failure", "authentication_success"} or protocol not in {"TCP", "UDP", "ICMP", "ICMPV6", "ARP"}:
             return None
         if not self.source_ip or not self.destination_ip:
             return None

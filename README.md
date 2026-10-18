@@ -58,31 +58,31 @@ plus end-to-end check are [`pt_traffic_replay.py`](pt_traffic_replay.py) and
 The diagram below is the **active reference lab** used by
 [`config.packet-tracer.yaml`](config.packet-tracer.yaml), the collector, and
 the Packet Tracer replay tests. It is an editable SVG diagram rather than a
-fake screenshot, so its IP addresses and device labels remain readable on
-GitHub and easy to update when the lab changes.
+fake screenshot, so its addresses and device labels remain readable on GitHub
+and easy to update when the lab changes. The exact, canonical physical-port,
+addressing, routing, SPAN, DNS, and test-flow specification is
+[`docs/packet-tracer/TOPOLOGY.md`](docs/packet-tracer/TOPOLOGY.md).
 
 ![Network Sentinel Packet Tracer reference lab](packet-tracer-lab.svg)
 
 | Zone | Network / gateway | Important devices | Purpose |
 | --- | --- | --- | --- |
-| Attacker test | `192.168.10.0/24` / `192.168.10.1` | `ATTACK-PC` `192.168.10.10` | Safe source for the simulated ping, DNS, and port-probe stories. |
-| Internal victims | `192.168.20.0/24` / `192.168.20.1` | `VICTIM-PC` `.20.10`, `APP-SRV` `.20.20`, `DNS-SRV` `.20.53` | Windows-like target, FTP/SSH application target, and DNS target. |
-| DMZ | `192.168.30.0/24` / `192.168.30.1` | `WEB-SRV` `192.168.30.10` | HTTP/HTTPS demonstration service. |
-| Monitoring | `192.168.40.0/24` / `192.168.40.1` | `LOG-SRV` `.40.10`, `ADMIN-PC` `.40.20` | Syslog/collector and administration zone. |
+| Attacker | `192.168.10.0/24` / R1 `Gi0/0` `192.168.10.1` | `Kali_Attacker` `192.168.10.10` | Controlled source for the isolated IDS test flows. |
+| Internal victims | `192.168.20.0/24` / R1 `Gi0/2` `192.168.20.1` | `Windows_Target` `.20.10`, `Linux_Target` `.20.20`, `DNS_Server` `.20.53` | Windows target, FTP/SSH target, and local DNS authority. |
+| DMZ | `192.168.30.0/24` / R1 `Gi0/1` `192.168.30.1` | `Web_Server` `192.168.30.10` | HTTP/HTTPS demo server. |
+| Monitoring | isolated `192.168.40.0/24` | `Monitoring_PC` `.40.10`, unnumbered `Sniffer0` | L2 SPAN destination; it has **no R1 gateway**. |
 
-All lab masks are `255.255.255.0`. R1 provides the four `.1` gateways; the
-reference diagram uses router subinterfaces and a core trunk. If your Packet
-Tracer file instead uses separate routed interfaces, keep the same addresses
-and update only the physical-port notes. For a mirrored-monitoring version,
-use Switch B as the source (`Gi0/1`, `Fa0/1–3`, both directions) and its
-monitor destination port as the monitoring uplink; Packet Tracer simulation
-details remain the authoritative visual evidence of those frames.
+All numbered interfaces use mask `255.255.255.0`. R1 has three directly
+connected, physical routed interfaces only: `Gi0/0`, `Gi0/1`, and `Gi0/2`.
+There is no core switch, router subinterface, trunk, or `192.168.40.1`
+gateway in this lab. Switch B mirrors `Fa0/1`, `Fa0/2`, `Fa0/3`, and `Gi0/1`
+in both directions to dedicated destination `Fa0/24`.
 
 When you change an address, update the `packet_tracer.targets` mapping in
-[`config.packet-tracer.yaml`](config.packet-tracer.yaml) first, then make the
-same change in the Packet Tracer diagram/file. That keeps replay events and
-lab-specific DNS/FTP/SSH detections aligned without hardcoding the addresses
-in Python.
+[`config.packet-tracer.yaml`](config.packet-tracer.yaml), the Packet Tracer
+file, the diagram, and [`TOPOLOGY.md`](docs/packet-tracer/TOPOLOGY.md) together.
+That keeps replay events and lab-specific DNS/FTP/SSH detections aligned
+without hardcoding the addresses in Python.
 
 > The proprietary `.pkt` simulator file is intentionally not in this source
 > repository yet. Add it only after opening it in Cisco Packet Tracer and

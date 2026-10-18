@@ -1,72 +1,106 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060">
-<defs><style>text{font-family:Arial,sans-serif;fill:#19324b}.h{font-size:24px;font-weight:bold}.t{font-size:18px}.s{font-size:16px}.box{fill:white;stroke:#67839d;stroke-width:2}.wire{fill:none;stroke:#476d8c;stroke-width:4}</style></defs>
-<rect width="1600" height="1060" fill="#f3f7fc"/>
-<text x="30" y="44" font-size="32" font-weight="bold">PACKET TRACER · ISOLATED IDS TRAFFIC LAB</text>
-<text x="30" y="77" class="t">All masks: 255.255.255.0 · static IPv4 · four VLANs · no Internet link · gateways on R1</text>
-<rect x="460" y="105" width="680" height="135" rx="12" class="box"/>
-<text x="480" y="138" class="h">R1 · Cisco 2911 · router-on-a-stick</text>
-<text x="480" y="167" class="t">G0/0 trunk ↔ CORE G0/1 · physical G0/0 has no IP</text>
-<text x="480" y="195" class="t">G0/0.10: 192.168.10.1 · G0/0.20: 192.168.20.1</text>
-<text x="480" y="223" class="t">G0/0.30: 192.168.30.1 · G0/0.40: 192.168.40.1</text>
-<path d="M800 240 V290" class="wire"/>
-<rect x="440" y="290" width="720" height="116" rx="12" class="box"/>
-<text x="460" y="324" class="h">SW-CORE · Cisco 2960-24TT</text>
-<text x="460" y="355" class="t">G0/1 trunk allows VLANs 10,20,30,40 · SVI VLAN 40: .40.3</text>
-<text x="460" y="385" class="t">Fa0/1 → A · Fa0/2 → B · Fa0/3 → DMZ · Fa0/4 → MON</text>
-<path d="M520 406 V438 H200 V485 M700 406 V452 H600 V485 M900 406 V452 H1000 V485 M1080 406 V438 H1400 V485" class="wire"/>
-<rect x="15" y="480" width="380" height="390" rx="12" fill="#fff0f0" stroke="#dc7b83"/>
-<rect x="410" y="480" width="380" height="390" rx="12" fill="#effaef" stroke="#6cb581"/>
-<rect x="805" y="480" width="380" height="390" rx="12" fill="#f6efff" stroke="#aa85cf"/>
-<rect x="1200" y="480" width="385" height="390" rx="12" fill="#edf6ff" stroke="#6aa5d1"/>
-<text x="30" y="517" class="h">ATTACK TEST · VLAN 10</text>
-<text x="30" y="547" class="t">192.168.10.0/24 · GW .10.1</text>
-<text x="425" y="517" class="h">VICTIMS · VLAN 20</text>
-<text x="425" y="547" class="t">192.168.20.0/24 · GW .20.1</text>
-<text x="820" y="517" class="h">DMZ · VLAN 30</text>
-<text x="820" y="547" class="t">192.168.30.0/24 · GW .30.1</text>
-<text x="1215" y="517" class="h">MONITOR · VLAN 40</text>
-<text x="1215" y="547" class="t">192.168.40.0/24 · GW .40.1</text>
-<rect x="30" y="569" width="350" height="110" rx="8" class="box"/>
-<text x="45" y="600" class="h">SW-A · 2960 · .10.2</text>
-<text x="45" y="630" class="s">G0/1 ↔ CORE Fa0/1: access VLAN 10</text>
-<text x="45" y="658" class="s">Fa0/1 ↔ ATTACK-PC FastEthernet0</text>
-<path d="M200 679 V710" class="wire"/>
-<rect x="30" y="710" width="350" height="130" rx="8" class="box"/>
-<text x="45" y="742" class="h">ATTACK-PC · PC-PT</text>
-<text x="45" y="774" class="t">192.168.10.10 · DNS .20.53</text>
-<text x="45" y="802" class="s">Ping / HTTP / DNS / complex PDUs</text>
-<text x="45" y="825" class="s">Simulated client; Kali tools unavailable</text>
-<rect x="425" y="569" width="350" height="110" rx="8" class="box"/>
-<text x="440" y="600" class="h">SW-B · 2960 · .20.2</text>
-<text x="440" y="630" class="s">G0/1 ↔ CORE Fa0/2: access VLAN 20</text>
-<text x="440" y="658" class="s">Fa0/1 PC · Fa0/2 APP · Fa0/3 DNS</text>
-<text x="440" y="714" class="t">PC-PT VICTIM-PC: 192.168.20.10</text>
-<text x="440" y="740" class="s">FastEthernet0 ↔ Fa0/1</text>
-<text x="440" y="769" class="t">Server-PT APP-SRV: .20.20</text>
-<text x="440" y="795" class="s">FastEthernet0 ↔ Fa0/2 · FTP 21 / SSH 22</text>
-<text x="440" y="824" class="t">Server-PT DNS-SRV: .20.53</text>
-<text x="440" y="850" class="s">FastEthernet0 ↔ Fa0/3 · UDP 53</text>
-<rect x="820" y="569" width="350" height="110" rx="8" class="box"/>
-<text x="835" y="600" class="h">SW-DMZ · 2960 · .30.2</text>
-<text x="835" y="630" class="s">G0/1 ↔ CORE Fa0/3: access VLAN 30</text>
-<text x="835" y="658" class="s">Fa0/1 ↔ WEB-SRV FastEthernet0</text>
-<path d="M1000 679 V710" class="wire"/>
-<rect x="820" y="710" width="350" height="130" rx="8" class="box"/>
-<text x="835" y="742" class="h">WEB-SRV · Server-PT</text>
-<text x="835" y="774" class="t">192.168.30.10 · DNS .20.53</text>
-<text x="835" y="802" class="s">HTTP TCP 80 · web.ids.test</text>
-<text x="835" y="825" class="s">DNS A record = 192.168.30.10</text>
-<rect x="1215" y="569" width="355" height="110" rx="8" class="box"/>
-<text x="1230" y="600" class="h">SW-MON · 2960 · .40.2</text>
-<text x="1230" y="630" class="s">G0/1 ↔ CORE Fa0/4: access VLAN 40</text>
-<text x="1230" y="658" class="s">Fa0/1 LOG-SRV · Fa0/2 ADMIN-PC</text>
-<text x="1230" y="727" class="t">Server-PT LOG-SRV: .40.10</text>
-<text x="1230" y="756" class="s">FastEthernet0 ↔ Fa0/1 · UDP 514</text>
-<text x="1230" y="798" class="t">PC-PT ADMIN-PC: .40.20</text>
-<text x="1230" y="827" class="s">FastEthernet0 ↔ Fa0/2 · SSH client</text>
-<rect x="15" y="896" width="1570" height="146" rx="10" class="box"/>
-<text x="35" y="930" class="h">CABLING / POLICY / OBSERVATION</text>
-<text x="35" y="961" class="t">PC/server-to-switch and R1-to-CORE: straight-through · switch-to-switch: crossover or automatic cable selection</text>
-<text x="35" y="991" class="t">All hosts DNS = 192.168.20.53 · switch SVI gateway = local .1 · observe packets in Simulation → Event List → PDU Details</text>
-<text x="35" y="1021" class="t">Optional ATTACK-IN ACL on R1 G0/0.10 inbound: allow DNS + DMZ HTTP; block other IPv4. SYSLOG is not packet capture.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080" role="img" aria-labelledby="title description">
+  <title id="title">Network Sentinel Packet Tracer canonical lab</title>
+  <desc id="description">R1 has three physical interfaces to Switch A, Switch DMZ, and Switch B. Switch B mirrors traffic through Switch C to Sniffer0 and Monitoring PC. The monitoring network is isolated and has no R1 gateway.</desc>
+  <defs>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #17324d; }
+      .title { font-size: 32px; font-weight: 700; }
+      .subtitle { font-size: 18px; fill: #49667e; }
+      .heading { font-size: 22px; font-weight: 700; }
+      .detail { font-size: 16px; }
+      .tiny { font-size: 14px; fill: #49667e; }
+      .device { fill: #ffffff; stroke: #547490; stroke-width: 2; }
+      .router { fill: #e8f4ff; stroke: #417aa8; stroke-width: 3; }
+      .attacker { fill: #fff0f0; stroke: #c96d78; stroke-width: 2; }
+      .dmz { fill: #fff6e8; stroke: #c88d42; stroke-width: 2; }
+      .internal { fill: #eef9ef; stroke: #5d9b6d; stroke-width: 2; }
+      .monitor { fill: #eef5ff; stroke: #5786bc; stroke-width: 2; }
+      .wire { fill: none; stroke: #456e90; stroke-width: 3; }
+      .mirror { fill: none; stroke: #7b5fa8; stroke-width: 4; stroke-dasharray: 9 7; }
+      .wirelabel { font-size: 14px; font-weight: 700; fill: #284b6d; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1080" fill="#f5f8fc"/>
+  <text x="38" y="48" class="title">Network Sentinel · Cisco Packet Tracer IDS Lab</text>
+  <text x="38" y="78" class="subtitle">Canonical physical topology · all links are copper straight-through · numbered interfaces use /24</text>
+
+  <rect x="645" y="112" width="310" height="138" rx="14" class="router"/>
+  <text x="670" y="150" class="heading">R1 · Cisco 2911 ISR</text>
+  <text x="670" y="182" class="detail">Gi0/0  192.168.10.1</text>
+  <text x="670" y="207" class="detail">Gi0/1  192.168.30.1</text>
+  <text x="670" y="232" class="detail">Gi0/2  192.168.20.1</text>
+
+  <rect x="34" y="284" width="432" height="374" rx="16" class="attacker"/>
+  <text x="58" y="322" class="heading">ATTACKER ZONE · 192.168.10.0/24</text>
+  <text x="58" y="348" class="detail">Gateway: R1 Gi0/0 · 192.168.10.1</text>
+  <rect x="112" y="389" width="268" height="88" rx="10" class="device"/>
+  <text x="132" y="422" class="heading">Switch_A · 2960</text>
+  <text x="132" y="452" class="detail">Fa0/1 ↔ Kali · Gi0/1 ↔ R1</text>
+  <rect x="112" y="533" width="268" height="92" rx="10" class="device"/>
+  <text x="132" y="566" class="heading">Kali_Attacker</text>
+  <text x="132" y="594" class="detail">Fa0 · 192.168.10.10</text>
+  <text x="132" y="616" class="tiny">GW .10.1 · DNS .20.53</text>
+  <path d="M246 477 V533" class="wire"/>
+  <text x="258" y="510" class="wirelabel">L01 Fa0 ↔ Fa0/1</text>
+  <path d="M380 418 C495 418 535 250 645 213" class="wire"/>
+  <text x="455" y="331" class="wirelabel">L02 Switch_A Gi0/1 ↔ R1 Gi0/0</text>
+
+  <rect x="570" y="284" width="460" height="374" rx="16" class="dmz"/>
+  <text x="594" y="322" class="heading">DMZ · 192.168.30.0/24</text>
+  <text x="594" y="348" class="detail">Gateway: R1 Gi0/1 · 192.168.30.1</text>
+  <rect x="660" y="389" width="278" height="88" rx="10" class="device"/>
+  <text x="680" y="422" class="heading">Switch_DMZ · 2960</text>
+  <text x="680" y="452" class="detail">Fa0/1 ↔ Web · Gi0/1 ↔ R1</text>
+  <rect x="660" y="533" width="278" height="92" rx="10" class="device"/>
+  <text x="680" y="566" class="heading">Web_Server</text>
+  <text x="680" y="594" class="detail">Fa0 · 192.168.30.10</text>
+  <text x="680" y="616" class="tiny">HTTP TCP/80 · HTTPS TCP/443</text>
+  <path d="M799 477 V533" class="wire"/>
+  <text x="811" y="510" class="wirelabel">L03 Fa0 ↔ Fa0/1</text>
+  <path d="M800 389 V250" class="wire"/>
+  <text x="814" y="336" class="wirelabel">L04 Gi0/1 ↔ R1 Gi0/1</text>
+
+  <rect x="1094" y="284" width="470" height="374" rx="16" class="internal"/>
+  <text x="1118" y="322" class="heading">INTERNAL VICTIMS · 192.168.20.0/24</text>
+  <text x="1118" y="348" class="detail">Gateway: R1 Gi0/2 · 192.168.20.1</text>
+  <rect x="1188" y="389" width="278" height="88" rx="10" class="device"/>
+  <text x="1208" y="422" class="heading">Switch_B · 2960 + Local SPAN</text>
+  <text x="1208" y="452" class="detail">Fa0/1–3 hosts · Gi0/1 ↔ R1 · Fa0/24 mirror</text>
+  <path d="M955 213 C1060 250 1080 418 1188 418" class="wire"/>
+  <text x="1015" y="331" class="wirelabel">L08 Switch_B Gi0/1 ↔ R1 Gi0/2</text>
+  <rect x="1116" y="533" width="126" height="94" rx="10" class="device"/>
+  <text x="1128" y="562" class="detail" font-weight="700">Windows</text>
+  <text x="1128" y="586" class="detail">.20.10</text>
+  <text x="1128" y="609" class="tiny">L05 Fa0 ↔ Fa0/1</text>
+  <rect x="1262" y="533" width="126" height="94" rx="10" class="device"/>
+  <text x="1274" y="562" class="detail" font-weight="700">Linux</text>
+  <text x="1274" y="586" class="detail">.20.20</text>
+  <text x="1274" y="609" class="tiny">L06 · FTP 21 / SSH 22</text>
+  <rect x="1408" y="533" width="126" height="94" rx="10" class="device"/>
+  <text x="1420" y="562" class="detail" font-weight="700">DNS_Server</text>
+  <text x="1420" y="586" class="detail">.20.53</text>
+  <text x="1420" y="609" class="tiny">L07 · UDP/TCP 53</text>
+  <path d="M1229 477 V533 M1325 477 V533 M1421 477 V533" class="wire"/>
+
+  <rect x="376" y="734" width="840" height="220" rx="16" class="monitor"/>
+  <text x="400" y="772" class="heading">MONITORING / SPAN · isolated 192.168.40.0/24</text>
+  <text x="400" y="800" class="detail">No R1 interface, no gateway. Switch_B source: Fa0/1, Fa0/2, Fa0/3, Gi0/1 — both directions. Destination: Fa0/24.</text>
+  <rect x="686" y="834" width="238" height="82" rx="10" class="device"/>
+  <text x="706" y="866" class="heading">Switch_C_SPAN · 2960</text>
+  <text x="706" y="894" class="detail">Fa0/1 mirror in · Fa0/2 / Fa0/3 out</text>
+  <rect x="414" y="834" width="222" height="82" rx="10" class="device"/>
+  <text x="434" y="866" class="heading">Sniffer0</text>
+  <text x="434" y="894" class="detail">Fa0 · unnumbered / promiscuous</text>
+  <rect x="974" y="834" width="216" height="82" rx="10" class="device"/>
+  <text x="994" y="866" class="heading">Monitoring_PC</text>
+  <text x="994" y="894" class="detail">Fa0 · 192.168.40.10 · no GW</text>
+  <path d="M1188 463 C1050 615 930 710 805 834" class="mirror"/>
+  <text x="950" y="704" class="wirelabel">L09 Switch_B Fa0/24 ↔ Switch_C_SPAN Fa0/1 (SPAN mirror)</text>
+  <path d="M636 875 H686 M924 875 H974" class="wire"/>
+  <text x="515" y="827" class="wirelabel">L10 Fa0/2 ↔ Sniffer0 Fa0</text>
+  <text x="940" y="827" class="wirelabel">L11 Fa0/3 ↔ Monitoring_PC Fa0</text>
+
+  <rect x="34" y="994" width="1532" height="56" rx="10" fill="#ffffff" stroke="#c5d4e2"/>
+  <text x="55" y="1028" class="detail">IDS test flows: ICMP sweep .10.10 → .20.10/.20/.53 · TCP SYN scan .10.10 → .20.10:80/445/8080 · FTP failures .10.10 → .20.20:21 · DNS burst .10.10 → .20.53:53 · normal HTTP .20.10 → .30.10:80</text>
 </svg>

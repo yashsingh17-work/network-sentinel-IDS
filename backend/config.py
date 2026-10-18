@@ -99,6 +99,8 @@ class Settings:
     packet_tracer_dmz_web_server_ip: str = "192.168.30.10"
     packet_tracer_gateway_ip: str = "192.168.20.1"
     packet_tracer_network_zone: str = "192.168.10.0/24"
+    packet_tracer_internal_network: str = "192.168.20.0/24"
+    packet_tracer_dmz_network: str = "192.168.30.0/24"
     packet_tracer_authentication_targets: tuple[str, ...] = ("192.168.20.20",)
 
     @classmethod
@@ -227,10 +229,23 @@ class Settings:
             packet_tracer_windows_target_ip=topology_value("windows_target", "192.168.20.10"),
             packet_tracer_linux_target_ip=topology_value("linux_target", "192.168.20.20"),
             packet_tracer_dmz_web_server_ip=topology_value("dmz_web_server", "192.168.30.10"),
-            packet_tracer_gateway_ip=topology_value("gateway", "192.168.20.1"),
+            # `internal_gateway` is the unambiguous canonical name.  Keep the
+            # older `gateway` spelling as a fallback for existing profiles.
+            packet_tracer_gateway_ip=topology_value(
+                "internal_gateway",
+                topology_value("gateway", "192.168.20.1"),
+            ),
             packet_tracer_network_zone=(
                 str(packet_tracer.get("attacker_network", "192.168.10.0/24")).strip()
                 if isinstance(packet_tracer, dict) else "192.168.10.0/24"
+            ),
+            packet_tracer_internal_network=(
+                str(packet_tracer.get("internal_network", "192.168.20.0/24")).strip()
+                if isinstance(packet_tracer, dict) else "192.168.20.0/24"
+            ),
+            packet_tracer_dmz_network=(
+                str(packet_tracer.get("dmz_network", "192.168.30.0/24")).strip()
+                if isinstance(packet_tracer, dict) else "192.168.30.0/24"
             ),
             packet_tracer_authentication_targets=tuple(
                 str(item).strip() for item in configured_auth_targets if str(item).strip()
