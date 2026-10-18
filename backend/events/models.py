@@ -49,6 +49,8 @@ class SecurityEvent:
                 "icmp_type": packet.icmp_type,
                 "icmp_code": packet.icmp_code,
                 "dns_query_name": packet.dns_query_name,
+                "dhcp_message_type": packet.dhcp_message_type,
+                "dhcp_server_id": packet.dhcp_server_id,
                 "source_mac": packet.source_mac,
                 "destination_mac": packet.destination_mac,
                 "arp_operation": packet.arp_operation,
@@ -62,7 +64,7 @@ class SecurityEvent:
     def to_packet(self) -> NormalizedPacket | None:
         """Adapt network metadata to the existing packet-analysis rules when safe."""
         protocol = (self.protocol or "").upper()
-        if self.event_type not in {"network_packet", "network_connection"} or protocol not in {"TCP", "UDP", "ICMP", "ARP"}:
+        if self.event_type not in {"network_packet", "network_connection"} or protocol not in {"TCP", "UDP", "ICMP", "ICMPV6", "ARP"}:
             return None
         if not self.source_ip or not self.destination_ip:
             return None
@@ -79,6 +81,8 @@ class SecurityEvent:
             icmp_type=_int_or_none(metadata.get("icmp_type")),
             icmp_code=_int_or_none(metadata.get("icmp_code")),
             dns_query_name=_string_or_none(metadata.get("dns_query_name")),
+            dhcp_message_type=_string_or_none(metadata.get("dhcp_message_type")),
+            dhcp_server_id=_string_or_none(metadata.get("dhcp_server_id")),
             source_mac=_string_or_none(metadata.get("source_mac")),
             destination_mac=_string_or_none(metadata.get("destination_mac")),
             arp_operation=_int_or_none(metadata.get("arp_operation")),

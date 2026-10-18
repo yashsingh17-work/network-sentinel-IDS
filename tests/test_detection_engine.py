@@ -135,3 +135,23 @@ def test_detects_conflicting_arp_replies_without_claiming_certainty() -> None:
     assert len(findings) == 1
     assert findings[0].detection_type == "ARP_SPOOFING_SUSPECTED"
     assert "may indicate ARP spoofing" in findings[0].evidence
+
+
+def test_records_clear_text_ftp_as_a_low_priority_security_finding() -> None:
+    findings = engine().analyze(packet(destination_port=21))
+
+    assert len(findings) == 1
+    assert findings[0].detection_type == "INSECURE_SERVICE_OBSERVED"
+    assert findings[0].severity == "LOW"
+    assert "does not encrypt" in findings[0].evidence
+
+
+def test_warns_about_multiple_dhcp_servers_without_calling_it_an_attack() -> None:
+    subject = engine(dhcp_server_conflict_threshold=2)
+
+    subject.analyze(packet(protocol="UDP", source_ip="10.0.0.1", source_mac="aa:bb:cc:dd:ee:01", dhcp_message_type="offer", dhcp_server_id="10.0.0.1"))
+    findings = subject.analyze(packet(protocol="UDP", source_ip="10.0.0.2", source_mac="aa:bb:cc:dd:ee:02", dhcp_message_type="ack", dhcp_server_id="10.0.0.2"))
+
+    assert len(findings) == 1
+    assert findings[0].detection_type == "MULTIPLE_DHCP_SERVERS_OBSERVED"
+    assert "can be legitimate" in findings[0].evidence

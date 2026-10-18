@@ -41,6 +41,18 @@ suspicious success-after-failure sequences, Suricata signature alerts, and Zeek
 notices. They are submitted through `POST /api/events`; `GET /api/events/recent`
 lists stored event evidence.
 
+## Packet Tracer lab bridge
+
+The project includes [`pt_collector.py`](pt_collector.py), a small local bridge
+for Cisco-style syslog, JSON-line events, and Packet Tracer text exports. Its
+records enter the same SQLite/alert/dashboard pipeline through
+`POST /api/events/ingest`; this endpoint accepts one strict normalized record
+or `{"events": [...]}`. The dedicated low-threshold lab profile lives in
+[`config.packet-tracer.yaml`](config.packet-tracer.yaml), and the safe replay
+plus end-to-end check are [`pt_traffic_replay.py`](pt_traffic_replay.py) and
+[`test_pipeline.py`](test_pipeline.py). See the complete
+[Packet Tracer bridge guide](docs/packet-tracer/IDS_BRIDGE.md).
+
 ## Configure data sources
 
 [`config.yaml`](config.yaml) is the main configuration file. It chooses enabled

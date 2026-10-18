@@ -49,6 +49,13 @@ detection:
   dns_query_time_window_seconds: 10
   arp_conflict_time_window_seconds: 120
   arp_conflict_mac_threshold: 2
+  # Header-only policy findings: FTP and Telnet are clear-text protocols.
+  # Add a port here only when its unencrypted use is disallowed in your environment.
+  insecure_service_ports: [21, 23]
+  # This warns when offers/acks from multiple DHCP server identities are observed.
+  # It is a finding to investigate, not proof that one server is malicious.
+  dhcp_server_conflict_time_window_seconds: 120
+  dhcp_server_conflict_threshold: 2
   auth_failure_threshold: 5
   auth_failure_time_window_seconds: 300
   suspicious_auth_sequence_window_seconds: 600

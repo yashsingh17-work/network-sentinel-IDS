@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060">
+<defs><style>text{font-family:Arial,sans-serif;fill:#19324b}.h{font-size:24px;font-weight:bold}.t{font-size:18px}.s{font-size:16px}.box{fill:white;stroke:#67839d;stroke-width:2}.wire{fill:none;stroke:#476d8c;stroke-width:4}</style></defs>
+<rect width="1600" height="1060" fill="#f3f7fc"/>
+<text x="30" y="44" font-size="32" font-weight="bold">PACKET TRACER · ISOLATED IDS TRAFFIC LAB</text>
+<text x="30" y="77" class="t">All masks: 255.255.255.0 · static IPv4 · four VLANs · no Internet link · gateways on R1</text>
+<rect x="460" y="105" width="680" height="135" rx="12" class="box"/>
+<text x="480" y="138" class="h">R1 · Cisco 2911 · router-on-a-stick</text>
+<text x="480" y="167" class="t">G0/0 trunk ↔ CORE G0/1 · physical G0/0 has no IP</text>
+<text x="480" y="195" class="t">G0/0.10: 192.168.10.1 · G0/0.20: 192.168.20.1</text>
+<text x="480" y="223" class="t">G0/0.30: 192.168.30.1 · G0/0.40: 192.168.40.1</text>
+<path d="M800 240 V290" class="wire"/>
+<rect x="440" y="290" width="720" height="116" rx="12" class="box"/>
+<text x="460" y="324" class="h">SW-CORE · Cisco 2960-24TT</text>
+<text x="460" y="355" class="t">G0/1 trunk allows VLANs 10,20,30,40 · SVI VLAN 40: .40.3</text>
+<text x="460" y="385" class="t">Fa0/1 → A · Fa0/2 → B · Fa0/3 → DMZ · Fa0/4 → MON</text>
+<path d="M520 406 V438 H200 V485 M700 406 V452 H600 V485 M900 406 V452 H1000 V485 M1080 406 V438 H1400 V485" class="wire"/>
+<rect x="15" y="480" width="380" height="390" rx="12" fill="#fff0f0" stroke="#dc7b83"/>
+<rect x="410" y="480" width="380" height="390" rx="12" fill="#effaef" stroke="#6cb581"/>
+<rect x="805" y="480" width="380" height="390" rx="12" fill="#f6efff" stroke="#aa85cf"/>
+<rect x="1200" y="480" width="385" height="390" rx="12" fill="#edf6ff" stroke="#6aa5d1"/>
+<text x="30" y="517" class="h">ATTACK TEST · VLAN 10</text>
+<text x="30" y="547" class="t">192.168.10.0/24 · GW .10.1</text>
+<text x="425" y="517" class="h">VICTIMS · VLAN 20</text>
+<text x="425" y="547" class="t">192.168.20.0/24 · GW .20.1</text>
+<text x="820" y="517" class="h">DMZ · VLAN 30</text>
+<text x="820" y="547" class="t">192.168.30.0/24 · GW .30.1</text>
+<text x="1215" y="517" class="h">MONITOR · VLAN 40</text>
+<text x="1215" y="547" class="t">192.168.40.0/24 · GW .40.1</text>
+<rect x="30" y="569" width="350" height="110" rx="8" class="box"/>
+<text x="45" y="600" class="h">SW-A · 2960 · .10.2</text>
+<text x="45" y="630" class="s">G0/1 ↔ CORE Fa0/1: access VLAN 10</text>
+<text x="45" y="658" class="s">Fa0/1 ↔ ATTACK-PC FastEthernet0</text>
+<path d="M200 679 V710" class="wire"/>
+<rect x="30" y="710" width="350" height="130" rx="8" class="box"/>
+<text x="45" y="742" class="h">ATTACK-PC · PC-PT</text>
+<text x="45" y="774" class="t">192.168.10.10 · DNS .20.53</text>
+<text x="45" y="802" class="s">Ping / HTTP / DNS / complex PDUs</text>
+<text x="45" y="825" class="s">Simulated client; Kali tools unavailable</text>
+<rect x="425" y="569" width="350" height="110" rx="8" class="box"/>
+<text x="440" y="600" class="h">SW-B · 2960 · .20.2</text>
+<text x="440" y="630" class="s">G0/1 ↔ CORE Fa0/2: access VLAN 20</text>
+<text x="440" y="658" class="s">Fa0/1 PC · Fa0/2 APP · Fa0/3 DNS</text>
+<text x="440" y="714" class="t">PC-PT VICTIM-PC: 192.168.20.10</text>
+<text x="440" y="740" class="s">FastEthernet0 ↔ Fa0/1</text>
+<text x="440" y="769" class="t">Server-PT APP-SRV: .20.20</text>
+<text x="440" y="795" class="s">FastEthernet0 ↔ Fa0/2 · TCP 80</text>
+<text x="440" y="824" class="t">Server-PT DNS-SRV: .20.53</text>
+<text x="440" y="850" class="s">FastEthernet0 ↔ Fa0/3 · UDP 53</text>
+<rect x="820" y="569" width="350" height="110" rx="8" class="box"/>
+<text x="835" y="600" class="h">SW-DMZ · 2960 · .30.2</text>
+<text x="835" y="630" class="s">G0/1 ↔ CORE Fa0/3: access VLAN 30</text>
+<text x="835" y="658" class="s">Fa0/1 ↔ WEB-SRV FastEthernet0</text>
+<path d="M1000 679 V710" class="wire"/>
+<rect x="820" y="710" width="350" height="130" rx="8" class="box"/>
+<text x="835" y="742" class="h">WEB-SRV · Server-PT</text>
+<text x="835" y="774" class="t">192.168.30.10 · DNS .20.53</text>
+<text x="835" y="802" class="s">HTTP TCP 80 · web.ids.test</text>
+<text x="835" y="825" class="s">DNS A record = 192.168.30.10</text>
+<rect x="1215" y="569" width="355" height="110" rx="8" class="box"/>
+<text x="1230" y="600" class="h">SW-MON · 2960 · .40.2</text>
+<text x="1230" y="630" class="s">G0/1 ↔ CORE Fa0/4: access VLAN 40</text>
+<text x="1230" y="658" class="s">Fa0/1 LOG-SRV · Fa0/2 ADMIN-PC</text>
+<text x="1230" y="727" class="t">Server-PT LOG-SRV: .40.10</text>
+<text x="1230" y="756" class="s">FastEthernet0 ↔ Fa0/1 · UDP 514</text>
+<text x="1230" y="798" class="t">PC-PT ADMIN-PC: .40.20</text>
+<text x="1230" y="827" class="s">FastEthernet0 ↔ Fa0/2 · SSH client</text>
+<rect x="15" y="896" width="1570" height="146" rx="10" class="box"/>
+<text x="35" y="930" class="h">CABLING / POLICY / OBSERVATION</text>
+<text x="35" y="961" class="t">PC/server-to-switch and R1-to-CORE: straight-through · switch-to-switch: crossover or automatic cable selection</text>
+<text x="35" y="991" class="t">All hosts DNS = 192.168.20.53 · switch SVI gateway = local .1 · observe packets in Simulation → Event List → PDU Details</text>
+<text x="35" y="1021" class="t">Optional ATTACK-IN ACL on R1 G0/0.10 inbound: allow DNS + DMZ HTTP; block other IPv4. SYSLOG is not packet capture.</text>
+</svg>

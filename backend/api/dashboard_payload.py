@@ -87,6 +87,23 @@ def dashboard_payload(services: ApplicationServices) -> dict[str, Any]:
                 "download_directories": downloads.directories,
                 "last_download_scan_at": downloads.last_scan_at,
             },
+            "sources": [
+                {
+                    "name": "Live Npcap capture",
+                    "state": "active" if status.capture_ready else "unavailable",
+                    "detail": status.interface or status.last_error or "No capture interface is active",
+                },
+                {
+                    "name": "Local Downloads monitor",
+                    "state": "active" if downloads.enabled and downloads.initialized else "waiting",
+                    "detail": f"{downloads.tracked_files} files baselined" if downloads.enabled else "Disabled by configuration",
+                },
+                {
+                    "name": "Packet Tracer collector",
+                    "state": "active" if services.event_repository.count_for_source("packet_tracer_collector") else "waiting",
+                    "detail": "Collector records received" if services.event_repository.count_for_source("packet_tracer_collector") else "Waiting for syslog, export, JSON, or replay",
+                },
+            ],
         },
     }
 

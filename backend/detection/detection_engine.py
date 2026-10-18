@@ -15,7 +15,8 @@ from backend.models import NormalizedPacket
 DetectionType = Literal[
     "PORT_SCAN", "SYN_FLOOD", "TRAFFIC_RATE_ANOMALY", "ICMP_SWEEP", "DNS_QUERY_ANOMALY", "ARP_SPOOFING_SUSPECTED",
     "AUTH_FAILURE_BURST", "SUSPICIOUS_AUTH_SEQUENCE", "SURICATA_SIGNATURE", "ZEEK_NETWORK_ANOMALY",
-    "DOWNLOAD_OBSERVED", "UNVERIFIED_RISKY_DOWNLOAD", "UNSAFE_WIFI_POSTURE", "SUSPICIOUS_DOMAIN"
+    "DOWNLOAD_OBSERVED", "UNVERIFIED_RISKY_DOWNLOAD", "UNSAFE_WIFI_POSTURE", "SUSPICIOUS_DOMAIN",
+    "INSECURE_SERVICE_OBSERVED", "MULTIPLE_DHCP_SERVERS_OBSERVED"
 ]
 Severity = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 
@@ -44,12 +45,14 @@ class DetectionEngine:
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or Settings.from_env()
         self._lock = RLock()
-        self._port_events: dict[str, deque[tuple[datetime, int]]] = {}
+        self._port_events: dict[str, deque[tuple[datetime, str, int]]] = {}
         self._syn_events: dict[str, deque[datetime]] = {}
+        self._syn_ack_events: dict[str, deque[datetime]] = {}
         self._traffic_events: deque[datetime] = deque()
         self._icmp_events: dict[str, deque[tuple[datetime, str]]] = {}
         self._dns_events: dict[str, deque[datetime]] = {}
         self._arp_claims: dict[str, dict[str, datetime]] = {}
+        self._dhcp_servers: dict[str, datetime] = {}
         self._cooldowns: dict[tuple[DetectionType, str | None], datetime] = {}
 
     def analyze(self, packet: NormalizedPacket) -> list[DetectionFinding]:
@@ -77,6 +80,12 @@ class DetectionEngine:
             arp_conflict = self._check_arp_conflict(packet)
             if arp_conflict is not None:
                 findings.append(arp_conflict)
+            insecure_service = self._check_insecure_service(packet)
+            if insecure_service is not None:
+                findings.append(insecure_service)
+            dhcp_servers = self._check_dhcp_servers(packet)
+            if dhcp_servers is not None:
+                findings.append(dhcp_servers)
             self._prune_cooldowns(packet.timestamp)
             context = self._packet_context(packet)
             return [replace(finding, context=context) for finding in findings]
@@ -87,16 +96,19 @@ class DetectionEngine:
         events = self._events_for(self._port_events, packet.source_ip)
         cutoff = packet.timestamp - timedelta(seconds=self._settings.port_scan_time_window_seconds)
         self._prune_events(events, cutoff)
-        events.append((packet.timestamp, packet.destination_port))
+        events.append((packet.timestamp, packet.destination_ip, packet.destination_port))
         self._cap_events(events)
-        unique_ports = len({port for _, port in events})
+        # A port scan is multiple ports on one target—not three ordinary
+        # connections to unrelated machines.  Choose the current target so the
+        # evidence identifies the host that needs investigation.
+        unique_ports = len({port for _, destination, port in events if destination == packet.destination_ip})
         if unique_ports < self._settings.port_scan_port_threshold or not self._ready("PORT_SCAN", packet.source_ip, packet.timestamp):
             return None
         threshold = self._settings.port_scan_port_threshold
         return DetectionFinding(
             timestamp=packet.timestamp,
             detection_type="PORT_SCAN",
-            severity="HIGH" if unique_ports >= threshold * 2 else "MEDIUM",
+            severity="HIGH" if self._settings.packet_tracer_lab_mode or unique_ports >= threshold * 2 else "MEDIUM",
             source_ip=packet.source_ip,
             destination_ip=packet.destination_ip,
             observed_value=unique_ports,
@@ -109,28 +121,49 @@ class DetectionEngine:
         )
 
     def _check_syn_activity(self, packet: NormalizedPacket) -> DetectionFinding | None:
-        if packet.protocol != "TCP" or not self._is_initial_syn(packet.tcp_flags):
+        if packet.protocol != "TCP":
             return None
-        events = self._events_for(self._syn_events, packet.source_ip)
         cutoff = packet.timestamp - timedelta(seconds=self._settings.syn_time_window_seconds)
+        # SYNs are keyed by source and target.  SYN-ACKs travel in the reverse
+        # direction, so they are counted against the original flow key.
+        flow_key = f"{packet.source_ip}>{packet.destination_ip}"
+        reverse_key = f"{packet.destination_ip}>{packet.source_ip}"
+        if self._is_syn_ack(packet.tcp_flags):
+            acknowledgements = self._events_for(self._syn_ack_events, reverse_key)
+            self._prune_events(acknowledgements, cutoff)
+            acknowledgements.append(packet.timestamp)
+            self._cap_events(acknowledgements)
+            return None
+        if not self._is_initial_syn(packet.tcp_flags):
+            return None
+        events = self._events_for(self._syn_events, flow_key)
+        acknowledgements = self._events_for(self._syn_ack_events, flow_key)
         self._prune_events(events, cutoff)
+        self._prune_events(acknowledgements, cutoff)
         events.append(packet.timestamp)
         self._cap_events(events)
         syn_count = len(events)
-        if syn_count < self._settings.syn_rate_threshold or not self._ready("SYN_FLOOD", packet.source_ip, packet.timestamp):
+        ack_count = len(acknowledgements)
+        ratio = float("inf") if ack_count == 0 else syn_count / ack_count
+        if (
+            syn_count < self._settings.syn_rate_threshold
+            or ratio <= 4
+            or not self._ready("SYN_FLOOD", flow_key, packet.timestamp)
+        ):
             return None
         threshold = self._settings.syn_rate_threshold
         return DetectionFinding(
             timestamp=packet.timestamp,
             detection_type="SYN_FLOOD",
-            severity="HIGH" if syn_count >= threshold * 2 else "MEDIUM",
+            severity="CRITICAL" if self._settings.packet_tracer_lab_mode else ("HIGH" if syn_count >= threshold * 2 else "MEDIUM"),
             source_ip=packet.source_ip,
             destination_ip=packet.destination_ip,
             observed_value=syn_count,
             threshold=threshold,
             evidence=(
-                f"{packet.source_ip} sent {syn_count} initial TCP SYN packets within "
-                f"{self._settings.syn_time_window_seconds} second(s) (threshold: {threshold})."
+                f"{packet.source_ip} sent {syn_count} initial TCP SYN packets to {packet.destination_ip} within "
+                f"{self._settings.syn_time_window_seconds} second(s) (threshold: {threshold}); "
+                f"the SYN-to-SYN-ACK ratio was {'>4:1' if ratio == float('inf') else f'{ratio:.1f}:1'} (threshold: >4:1)."
             ),
         )
 
@@ -185,6 +218,8 @@ class DetectionEngine:
 
     def _check_dns_query_rate(self, packet: NormalizedPacket) -> DetectionFinding | None:
         if packet.dns_query_name is None:
+            return None
+        if self._settings.packet_tracer_dns_server and packet.destination_ip != self._settings.packet_tracer_dns_server:
             return None
         events = self._events_for(self._dns_events, packet.source_ip)
         cutoff = packet.timestamp - timedelta(seconds=self._settings.dns_query_time_window_seconds)
@@ -254,6 +289,69 @@ class DetectionEngine:
             ),
         )
 
+    def _check_insecure_service(self, packet: NormalizedPacket) -> DetectionFinding | None:
+        """Record clear-text service use without pretending it proves compromise."""
+        if packet.protocol != "TCP" or packet.destination_port not in self._settings.insecure_service_ports:
+            return None
+        service = describe_port(packet.destination_port)
+        subject = f"{packet.source_ip}>{packet.destination_ip}:{packet.destination_port}"
+        if not self._ready("INSECURE_SERVICE_OBSERVED", subject, packet.timestamp):
+            return None
+        return DetectionFinding(
+            timestamp=packet.timestamp,
+            detection_type="INSECURE_SERVICE_OBSERVED",
+            severity="LOW",
+            source_ip=packet.source_ip,
+            destination_ip=packet.destination_ip,
+            observed_value=1,
+            threshold=1,
+            evidence=(
+                f"Observed TCP traffic to {service.label}. {service.service} does not encrypt its protocol "
+                "by design, so credentials or content may be exposed if that service is in use."
+            ),
+            confidence=0.8,
+            recommended_investigation=(
+                "Confirm the asset owner intended this service. Prefer SFTP/SSH instead of FTP and SSH instead "
+                "of Telnet; restrict or retire the clear-text service where possible."
+            ),
+        )
+
+    def _check_dhcp_servers(self, packet: NormalizedPacket) -> DetectionFinding | None:
+        """Warn only when multiple DHCP server identities are visible in one time window."""
+        if packet.protocol != "UDP" or packet.dhcp_message_type not in {"offer", "ack"}:
+            return None
+        server_identity = packet.dhcp_server_id or packet.source_mac or packet.source_ip
+        cutoff = packet.timestamp - timedelta(seconds=self._settings.dhcp_server_conflict_time_window_seconds)
+        for identity, last_seen in list(self._dhcp_servers.items()):
+            if last_seen < cutoff:
+                del self._dhcp_servers[identity]
+        self._dhcp_servers[server_identity] = packet.timestamp
+        observed_servers = len(self._dhcp_servers)
+        if (
+            observed_servers < self._settings.dhcp_server_conflict_threshold
+            or not self._ready("MULTIPLE_DHCP_SERVERS_OBSERVED", "network", packet.timestamp)
+        ):
+            return None
+        return DetectionFinding(
+            timestamp=packet.timestamp,
+            detection_type="MULTIPLE_DHCP_SERVERS_OBSERVED",
+            severity="MEDIUM",
+            source_ip=packet.source_ip,
+            destination_ip=packet.destination_ip,
+            observed_value=observed_servers,
+            threshold=self._settings.dhcp_server_conflict_threshold,
+            evidence=(
+                f"Observed DHCP {packet.dhcp_message_type} messages from {observed_servers} server identities within "
+                f"{self._settings.dhcp_server_conflict_time_window_seconds} seconds. This can be legitimate in a "
+                "managed redundant design, or it can indicate an unauthorized DHCP server."
+            ),
+            confidence=0.65,
+            recommended_investigation=(
+                "Compare the observed DHCP server identities with the approved DHCP design. Investigate unknown "
+                "servers before clients receive incorrect gateway or DNS settings."
+            ),
+        )
+
     def _events_for(self, registry: dict[str, deque], key: str) -> deque:
         events = registry.get(key)
         if events is not None:
@@ -291,6 +389,10 @@ class DetectionEngine:
         return flags is not None and "S" in flags and "A" not in flags
 
     @staticmethod
+    def _is_syn_ack(flags: str | None) -> bool:
+        return flags is not None and "S" in flags and "A" in flags
+
+    @staticmethod
     def _packet_context(packet: NormalizedPacket) -> dict[str, Any]:
         """Keep safe header metadata with an alert; application payloads stay excluded."""
         context: dict[str, Any] = {
@@ -305,11 +407,19 @@ class DetectionEngine:
             context.update(source_port=source.number, source_port_label=source.label, source_port_description=source.description)
         if packet.destination_port is not None:
             destination = describe_port(packet.destination_port)
-            context.update(destination_port=destination.number, destination_port_label=destination.label, destination_port_description=destination.description)
+            context.update(
+                destination_port=destination.number,
+                destination_port_label=destination.label,
+                destination_port_description=destination.description,
+                likely_application_protocol=destination.service,
+                application_protocol_basis="destination port (port-based estimate)",
+            )
         if packet.tcp_flags:
             context["tcp_flags"] = packet.tcp_flags
         if packet.dns_query_name:
             context["dns_query_name"] = packet.dns_query_name
+        if packet.dhcp_message_type:
+            context.update(dhcp_message_type=packet.dhcp_message_type, dhcp_server_id=packet.dhcp_server_id)
         if packet.icmp_type is not None:
             context.update(icmp_type=packet.icmp_type, icmp_code=packet.icmp_code)
         if packet.arp_operation is not None:
@@ -325,6 +435,9 @@ def _packet_type(packet: NormalizedPacket) -> str:
     if packet.protocol == "ICMP":
         names = {0: "echo reply", 8: "echo request", 128: "echo request", 129: "echo reply"}
         return f"ICMP {names.get(packet.icmp_type, 'message')}"
+    if packet.protocol == "ICMPV6":
+        names = {128: "echo request", 129: "echo reply", 134: "router advertisement"}
+        return f"ICMPv6 {names.get(packet.icmp_type, 'message')}"
     if packet.protocol == "ARP":
         return "ARP reply" if packet.arp_operation == 2 else "ARP request"
     return "Network packet"

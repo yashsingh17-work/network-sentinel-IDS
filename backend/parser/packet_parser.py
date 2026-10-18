@@ -10,14 +10,14 @@ from backend.models import NormalizedPacket
 
 
 class PacketParser:
-    """Parse only IPv4 packets; unsupported or malformed input is ignored safely."""
+    """Normalize safe network headers from IPv4, IPv6, ARP, DNS, and DHCP traffic."""
 
     def parse(self, packet: Any) -> NormalizedPacket | None:
         try:
-            if not packet.haslayer("IP") and not packet.haslayer("ARP"):
+            if not packet.haslayer("IP") and not packet.haslayer("IPv6") and not packet.haslayer("ARP"):
                 return None
 
-            ip = packet["IP"] if packet.haslayer("IP") else None
+            ip = packet["IP"] if packet.haslayer("IP") else (packet["IPv6"] if packet.haslayer("IPv6") else None)
             protocol = "OTHER"
             source_port: int | None = None
             destination_port: int | None = None
@@ -25,6 +25,8 @@ class PacketParser:
             icmp_type: int | None = None
             icmp_code: int | None = None
             dns_query_name: str | None = None
+            dhcp_message_type: str | None = None
+            dhcp_server_id: str | None = None
             source_mac: str | None = None
             destination_mac: str | None = None
             arp_operation: int | None = None
@@ -62,9 +64,23 @@ class PacketParser:
                 protocol = "ICMP"
                 icmp_type = int(icmp.type)
                 icmp_code = int(icmp.code)
+            elif packet.haslayer("ICMPv6EchoRequest"):
+                protocol = "ICMPV6"
+                icmp_type = 128
+                icmp_code = 0
+            elif packet.haslayer("ICMPv6EchoReply"):
+                protocol = "ICMPV6"
+                icmp_type = 129
+                icmp_code = 0
+            elif packet.haslayer("ICMPv6ND_RA"):
+                protocol = "ICMPV6"
+                icmp_type = 134
+                icmp_code = 0
 
             if packet.haslayer("DNSQR"):
                 dns_query_name = self._decode_dns_query(packet["DNSQR"].qname)
+            if packet.haslayer("DHCP"):
+                dhcp_message_type, dhcp_server_id = self._dhcp_details(packet["DHCP"])
 
             raw_timestamp = getattr(packet, "time", None)
             timestamp = datetime.fromtimestamp(float(raw_timestamp), tz=timezone.utc) if raw_timestamp else datetime.now(timezone.utc)
@@ -80,6 +96,8 @@ class PacketParser:
                 icmp_type=icmp_type,
                 icmp_code=icmp_code,
                 dns_query_name=dns_query_name,
+                dhcp_message_type=dhcp_message_type,
+                dhcp_server_id=dhcp_server_id,
                 source_mac=source_mac,
                 destination_mac=destination_mac,
                 arp_operation=arp_operation,
@@ -98,3 +116,21 @@ class PacketParser:
         if isinstance(value, str):
             return value.rstrip(".")
         return None
+
+    @staticmethod
+    def _dhcp_details(dhcp: object) -> tuple[str | None, str | None]:
+        """Extract DHCP option metadata without retaining its payload."""
+        options = getattr(dhcp, "options", ())
+        if not isinstance(options, (list, tuple)):
+            return None, None
+        values = {item[0]: item[1] for item in options if isinstance(item, tuple) and len(item) >= 2}
+        message = values.get("message-type")
+        if isinstance(message, bytes):
+            message = message.decode("ascii", errors="ignore")
+        names = {1: "discover", 2: "offer", 3: "request", 5: "ack", 6: "nak", 7: "release", 8: "inform"}
+        try:
+            message_name = names.get(int(message), str(message).lower()) if message is not None else None
+        except (TypeError, ValueError):
+            message_name = str(message).lower() if message is not None else None
+        server_id = values.get("server_id")
+        return message_name, str(server_id) if server_id is not None else None

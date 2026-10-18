@@ -110,6 +110,7 @@ class MonitoringService:
         self._analyzer.ingest(packet)
         self._device_tracker.ingest(packet)
         alerts = self._alert_manager.create_from_findings(self._detector.analyze(packet))
+        self._analyzer.annotate_packet_alerts(packet, alerts)
         if alerts and self._alert_callback is not None:
             self._alert_callback(alerts)
         return alerts

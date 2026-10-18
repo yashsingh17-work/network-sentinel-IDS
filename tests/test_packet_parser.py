@@ -59,6 +59,28 @@ def test_parses_a_dns_query_name() -> None:
     assert parsed.dns_query_name == "example.com"
 
 
+def test_parses_dhcp_header_metadata_without_retaining_payload() -> None:
+    parsed = PacketParser().parse(ip_packet(
+        ("UDP", SimpleNamespace(sport=67, dport=68)),
+        ("DHCP", SimpleNamespace(options=[("message-type", 2), ("server_id", "10.0.0.1"), "end"])),
+    ))
+
+    assert parsed is not None
+    assert (parsed.protocol, parsed.dhcp_message_type, parsed.dhcp_server_id) == ("UDP", "offer", "10.0.0.1")
+
+
+def test_parses_icmpv6_echo_request() -> None:
+    packet = SyntheticPacket({
+        "IPv6": SimpleNamespace(src="2001:db8::10", dst="2001:db8::20"),
+        "ICMPv6EchoRequest": SimpleNamespace(),
+    })
+
+    parsed = PacketParser().parse(packet)
+
+    assert parsed is not None
+    assert (parsed.protocol, parsed.icmp_type, parsed.source_ip) == ("ICMPV6", 128, "2001:db8::10")
+
+
 def test_parses_arp_identity_details() -> None:
     packet = SyntheticPacket(
         {

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Literal
 
-Protocol = Literal["TCP", "UDP", "ICMP", "ARP", "OTHER"]
+Protocol = Literal["TCP", "UDP", "ICMP", "ICMPV6", "ARP", "OTHER"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +24,8 @@ class NormalizedPacket:
     icmp_type: int | None = None
     icmp_code: int | None = None
     dns_query_name: str | None = None
+    dhcp_message_type: str | None = None
+    dhcp_server_id: str | None = None
     source_mac: str | None = None
     destination_mac: str | None = None
     arp_operation: int | None = None
@@ -46,6 +48,8 @@ class NormalizedPacket:
         icmp_type: int | None = None,
         icmp_code: int | None = None,
         dns_query_name: str | None = None,
+        dhcp_message_type: str | None = None,
+        dhcp_server_id: str | None = None,
         source_mac: str | None = None,
         destination_mac: str | None = None,
         arp_operation: int | None = None,
@@ -66,6 +70,8 @@ class NormalizedPacket:
             icmp_type=icmp_type,
             icmp_code=icmp_code,
             dns_query_name=dns_query_name,
+            dhcp_message_type=dhcp_message_type,
+            dhcp_server_id=dhcp_server_id,
             source_mac=source_mac,
             destination_mac=destination_mac,
             arp_operation=arp_operation,

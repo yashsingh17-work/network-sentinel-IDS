@@ -1,0 +1,42 @@
+# Dedicated profile for the private Packet Tracer lab. Start the API with
+# CONFIG_PATH=config.packet-tracer.yaml so home/office capture thresholds stay unchanged.
+sources:
+  packet_capture:
+    enabled: true
+    auto_start: true
+  download_monitor:
+    enabled: true
+storage:
+  backend: sqlite
+  database_path: packet_tracer_network_sentinel.db
+packet_tracer:
+  enabled: true
+  # Change these values when you change the Packet Tracer topology. The
+  # collector and dashboard accept any addresses; these drive lab-specific
+  # replay data and DNS/FTP/SSH rules only.
+  attacker_network: 192.168.10.0/24
+  targets:
+    attacker: 192.168.10.10
+    windows_target: 192.168.20.10
+    linux_target: 192.168.20.20
+    dns_server: 192.168.20.53
+    dmz_web_server: 192.168.30.10
+    gateway: 192.168.20.1
+  authentication_targets:
+    - 192.168.20.20
+detection:
+  port_scan_port_threshold: 3
+  port_scan_time_window_seconds: 8
+  syn_rate_threshold: 20
+  syn_time_window_seconds: 1
+  traffic_rate_threshold: 1000
+  traffic_rate_window_seconds: 1
+  icmp_sweep_destination_threshold: 3
+  icmp_sweep_time_window_seconds: 10
+  dns_query_rate_threshold: 5
+  dns_query_time_window_seconds: 5
+  arp_conflict_time_window_seconds: 120
+  arp_conflict_mac_threshold: 2
+  auth_failure_threshold: 3
+  auth_failure_time_window_seconds: 30
+  alert_cooldown_seconds: 5

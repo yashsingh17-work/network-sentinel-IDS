@@ -68,6 +68,12 @@ class EventRepository:
             for row in rows
         ]
 
+    def count_for_source(self, source: str) -> int:
+        """Small status query used for truthful dashboard source badges."""
+        with self._connect() as connection:
+            row = connection.execute("SELECT COUNT(*) AS count FROM security_events WHERE source = ?", (source,)).fetchone()
+        return int(row["count"] if row else 0)
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self._database_path)
         connection.row_factory = sqlite3.Row

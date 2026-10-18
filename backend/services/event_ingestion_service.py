@@ -6,6 +6,7 @@ from collections import deque
 from dataclasses import dataclass
 from datetime import timedelta
 from threading import RLock
+import re
 from collections.abc import Callable
 
 from backend.alerts import Alert, AlertManager
@@ -54,6 +55,15 @@ class EventIngestionService:
             return self._authentication_failure(event)
         if event.event_type == "authentication_success":
             return self._authentication_success(event)
+        if (
+            event.source == "packet_tracer_collector"
+            and event.destination_ip in self._settings.packet_tracer_authentication_targets
+            and event.destination_port in {21, 22}
+            and re.search(r"\b530\b|cannot log in|failed (?:ssh )?authentication|ssh handshake failed", str(event.metadata.get("raw_data", "")), re.IGNORECASE)
+        ):
+            # Packet Tracer FTP/SSH exports can provide the failed response as
+            # packet text, not a separate authentication record.
+            return self._authentication_failure(event)
         if event.source == "suricata" and event.event_type == "ids_alert":
             return [self._suricata_finding(event)]
         if event.source == "zeek" and event.event_type == "zeek_notice":

@@ -93,7 +93,7 @@ class PacketTracerDemoService:
             return [
                 SecurityEvent(
                     timestamp=now + timedelta(milliseconds=offset), source="packet_tracer_demo", event_type="network_connection",
-                    source_ip="198.18.0.10", destination_ip="172.16.40.10", source_port=source_port + offset,
+                    source_ip=self._settings.packet_tracer_attacker_ip, destination_ip=self._settings.packet_tracer_dmz_web_server_ip, source_port=source_port + offset,
                     destination_port=10_000 + offset, protocol="TCP", bytes_count=60, packets_count=1,
                     metadata={**metadata, "tcp_flags": "S", "topology_role": "Attacker-PC to DMZ-Web"},
                 )
@@ -103,29 +103,31 @@ class PacketTracerDemoService:
             failures = [
                 SecurityEvent(
                     timestamp=now + timedelta(milliseconds=offset), source="packet_tracer_demo", event_type="authentication_failure",
-                    source_ip="10.10.30.25", metadata={**metadata, "user": "lab.admin", "topology_role": "Admin-PC"},
+                    source_ip=self._settings.packet_tracer_attacker_ip, destination_ip=self._settings.packet_tracer_linux_target_ip,
+                    metadata={**metadata, "user": "lab.admin", "topology_role": "Admin-PC"},
                 )
                 for offset in range(self._settings.auth_failure_threshold)
             ]
             return failures + [
                 SecurityEvent(
                     timestamp=now + timedelta(seconds=1), source="packet_tracer_demo", event_type="authentication_success",
-                    source_ip="10.10.30.25", metadata={**metadata, "user": "lab.admin", "topology_role": "Admin-PC"},
+                    source_ip=self._settings.packet_tracer_attacker_ip, destination_ip=self._settings.packet_tracer_linux_target_ip,
+                    metadata={**metadata, "user": "lab.admin", "topology_role": "Admin-PC"},
                 )
             ]
         if scenario_id == "arp-conflict":
             return [
                 SecurityEvent(
                     timestamp=now + timedelta(milliseconds=offset), source="packet_tracer_demo", event_type="network_packet",
-                    source_ip="10.10.10.1", destination_ip="10.10.10.25", protocol="ARP", bytes_count=42, packets_count=1,
-                    metadata={**metadata, "arp_operation": 2, "arp_source_ip": "10.10.10.1", "arp_source_mac": mac,
-                              "arp_target_ip": "10.10.10.25", "arp_target_mac": "00:25:96:aa:10:25", "topology_role": "User VLAN gateway"},
+                    source_ip=self._settings.packet_tracer_gateway_ip, destination_ip=self._settings.packet_tracer_windows_target_ip, protocol="ARP", bytes_count=42, packets_count=1,
+                    metadata={**metadata, "arp_operation": 2, "arp_source_ip": self._settings.packet_tracer_gateway_ip, "arp_source_mac": mac,
+                              "arp_target_ip": self._settings.packet_tracer_windows_target_ip, "arp_target_mac": "00:25:96:aa:10:25", "topology_role": "Configured lab gateway"},
                 )
                 for offset, mac in enumerate(("00:25:96:aa:10:01", "00:25:96:aa:10:99"))
             ]
         return [
             SecurityEvent(
-                timestamp=now, source="suricata", event_type="ids_alert", source_ip="198.18.0.10", destination_ip="172.16.40.10",
+                timestamp=now, source="suricata", event_type="ids_alert", source_ip=self._settings.packet_tracer_attacker_ip, destination_ip=self._settings.packet_tracer_dmz_web_server_ip,
                 protocol="TCP", destination_port=443,
                 metadata={**metadata, "signature": "DEMO: Packet Tracer DMZ policy test", "signature_id": 9_002_001,
                           "severity": 2, "topology_role": "ISR IDS/IPS sensor"},

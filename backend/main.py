@@ -59,6 +59,11 @@ def create_app(services: ApplicationServices | None = None) -> FastAPI:
     async def websocket_dashboard(websocket: WebSocket) -> None:
         await app.state.hub.serve(websocket, lambda: dashboard_payload(app.state.services))
 
+    @app.websocket("/api/ws")
+    async def websocket_api(websocket: WebSocket) -> None:
+        """API alias for collectors and integrations expecting /api/ws."""
+        await app.state.hub.serve(websocket, lambda: dashboard_payload(app.state.services))
+
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}

@@ -27,7 +27,7 @@
       </section>
       <section class="grid two-col">
         <article class="panel"><header><h2>Traffic rate</h2><span>last 60 sec</span></header><div id="rate-chart" class="chart" aria-label="Traffic rate chart"></div></article>
-        <article class="panel"><header><h2>Protocol distribution</h2><span id="protocol-total">0 packets</span></header><div id="protocols" class="protocol-list empty">No traffic yet</div></article>
+        <article class="panel"><header><h2>Protocol distribution</h2><span id="protocol-total">Click a protocol</span></header><div id="protocols" class="protocol-list empty">No traffic yet</div></article>
       </section>
       <section class="grid three-col">
         <article class="panel"><header><h2>Top source IPs</h2></header><div id="top-sources" class="rank-list empty">No traffic yet</div></article>
@@ -37,6 +37,10 @@
       <section class="grid alerts-layout">
         <article class="panel"><header><h2>Live security alerts</h2><span id="alert-count">0 recorded</span></header><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Detection</th><th>Traffic type</th><th>Source</th><th>Destination</th><th>Time</th></tr></thead><tbody id="alerts-table"><tr><td colspan="6" class="empty">No alerts recorded</td></tr></tbody></table></div></article>
         <aside class="panel detail-panel"><header><h2>Alert evidence</h2></header><div id="alert-detail" class="empty detail-empty">Select an alert to view its explanation.</div></aside>
+      </section>
+      <section class="grid two-col compact-row">
+        <article class="panel investigation-panel"><header><h2 id="investigation-title">Packet investigation</h2><span id="investigation-note">Select a protocol or device</span></header><form id="packet-filter" class="packet-filter"><select id="filter-protocol" aria-label="Protocol"><option value="ALL">All traffic</option><option value="TCP">TCP</option><option value="UDP">UDP</option><option value="ICMP">ICMP</option><option value="ICMPV6">ICMPv6</option><option value="ARP">ARP</option><option value="OTHER">Other IP</option></select><select id="filter-service" aria-label="Observed service"><option value="">Any service</option><option value="DNS">DNS</option><option value="DHCP server">DHCP server</option><option value="HTTP">HTTP</option><option value="HTTPS">HTTPS</option><option value="FTP">FTP</option><option value="SSH">SSH</option><option value="Telnet">Telnet</option><option value="SMB">SMB</option><option value="RDP">RDP</option></select><input id="filter-source" placeholder="Source IP" aria-label="Source IP" /><input id="filter-destination" placeholder="Destination IP" aria-label="Destination IP" /><input id="filter-port" type="number" min="0" max="65535" placeholder="Destination port" aria-label="Destination port" /><button type="submit" class="secondary">Filter</button></form><div id="investigation-detail" class="empty detail-empty">Filter traffic, then click a packet to see its own header facts and why it was—or was not—flagged.</div></article>
+        <article class="panel"><header><h2>Data-source trust</h2><span>what powers this screen</span></header><div id="source-trust" class="source-list empty">Waiting for source status</div></article>
       </section>
       <section class="grid two-col">
         <article class="panel"><header><h2>Observed devices</h2><span>passively seen</span></header><div id="devices" class="device-list empty">Start monitoring to build a device inventory.</div></article>

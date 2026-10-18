@@ -104,3 +104,20 @@ def test_observed_device_profile_is_user_provided(tmp_path) -> None:
     assert device["vendor"] == "Cisco Systems"
     assert device["display_name"] == "Lab web server"
     assert device["physical_location"] == "Lab A rack"
+
+
+def test_packet_investigator_filters_by_service_and_keeps_packet_alert_reason(tmp_path) -> None:
+    client, services = client_and_services(tmp_path)
+    client.post("/api/monitoring/start")
+    services.monitoring.process(packet(21))
+    services.monitoring.process(packet(443))
+
+    ftp_packets = client.get("/api/traffic/protocols/ALL/packets?service=FTP").json()
+    https_packets = client.get("/api/traffic/protocols/TCP/packets?service=HTTPS").json()
+
+    assert len(ftp_packets) == 1
+    assert ftp_packets[0]["likely_application_protocol"] == "FTP"
+    assert ftp_packets[0]["triggered_alert_types"] == ["INSECURE_SERVICE_OBSERVED"]
+    assert "does not encrypt" in ftp_packets[0]["alert_evidence"][0]
+    assert len(https_packets) == 1
+    assert https_packets[0]["likely_application_protocol"] == "HTTPS"

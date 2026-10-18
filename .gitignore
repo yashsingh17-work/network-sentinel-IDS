@@ -3,8 +3,14 @@ __pycache__/
 .pytest_cache/
 .venv/
 network_sentinel.db
+packet_tracer_network_sentinel.db
 .env
 network-sentinel-startup.log
 network-sentinel-uvicorn.out.log
 network-sentinel-uvicorn.err.log
 .test-artifacts*/
+node_modules/
+tmp/
+_delivery/
+*.zip
+packet-tracer-test.txt

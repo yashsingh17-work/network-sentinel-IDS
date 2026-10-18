@@ -53,6 +53,9 @@ class Settings:
     dns_query_time_window_seconds: int = 10
     arp_conflict_time_window_seconds: int = 120
     arp_conflict_mac_threshold: int = 2
+    dhcp_server_conflict_time_window_seconds: int = 120
+    dhcp_server_conflict_threshold: int = 2
+    insecure_service_ports: tuple[int, ...] = (21, 23)
     alert_cooldown_seconds: int = 60
     rate_window_seconds: int = 5
     history_window_seconds: int = 60
@@ -61,6 +64,7 @@ class Settings:
     max_connections: int = 10_000
     connection_ttl_seconds: int = 300
     max_detector_events_per_key: int = 10_000
+    max_packet_history: int = 1_000
     database_path: str = "network_sentinel.db"
     max_tracked_devices: int = 500
     device_ttl_seconds: int = 3_600
@@ -87,16 +91,28 @@ class Settings:
     download_max_files: int = 1_000
     download_hash_max_bytes: int = 134_217_728
     unsafe_domains: tuple[str, ...] = ()
+    packet_tracer_dns_server: str | None = None
+    packet_tracer_lab_mode: bool = False
+    packet_tracer_attacker_ip: str = "192.168.10.10"
+    packet_tracer_windows_target_ip: str = "192.168.20.10"
+    packet_tracer_linux_target_ip: str = "192.168.20.20"
+    packet_tracer_dmz_web_server_ip: str = "192.168.30.10"
+    packet_tracer_gateway_ip: str = "192.168.20.1"
+    packet_tracer_network_zone: str = "192.168.10.0/24"
+    packet_tracer_authentication_targets: tuple[str, ...] = ("192.168.20.20",)
 
     @classmethod
-    def from_env(cls) -> "Settings":
-        document = _load_config(getenv("CONFIG_PATH", "config.yaml"))
+    def from_env(cls, config_path: str | None = None) -> "Settings":
+        """Load environment-selected settings, optionally from an explicit profile path."""
+        document = _load_config(config_path or getenv("CONFIG_PATH", "config.yaml"))
         detection = _nested(document, "detection", default={})
         sources = _nested(document, "sources", default={})
         storage = _nested(document, "storage", default={})
         enrichment = _nested(document, "enrichment", default={})
         download_monitor = sources.get("download_monitor", {}) if isinstance(sources, dict) else {}
         threat_intelligence = _nested(document, "threat_intelligence", default={})
+        packet_tracer = _nested(document, "packet_tracer", default={})
+        packet_tracer_targets = packet_tracer.get("targets", {}) if isinstance(packet_tracer, dict) else {}
 
         def number(name: str, yaml_key: str, fallback: int) -> int:
             return _positive_int(name, int(detection.get(yaml_key, fallback)))
@@ -123,6 +139,26 @@ class Settings:
         configured_domains = threat_intelligence.get("unsafe_domains", []) if isinstance(threat_intelligence, dict) else []
         if not isinstance(configured_domains, list):
             configured_domains = []
+        configured_insecure_ports = detection.get("insecure_service_ports", [21, 23]) if isinstance(detection, dict) else [21, 23]
+        if not isinstance(configured_insecure_ports, list):
+            configured_insecure_ports = [21, 23]
+        insecure_service_ports: list[int] = []
+        for item in configured_insecure_ports:
+            try:
+                port = int(item)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= port <= 65535:
+                insecure_service_ports.append(port)
+        if not isinstance(packet_tracer_targets, dict):
+            packet_tracer_targets = {}
+        configured_auth_targets = packet_tracer.get("authentication_targets", []) if isinstance(packet_tracer, dict) else []
+        if not isinstance(configured_auth_targets, list):
+            configured_auth_targets = []
+
+        def topology_value(name: str, fallback: str) -> str:
+            value = packet_tracer_targets.get(name, fallback)
+            return str(value).strip() or fallback
         return cls(
             port_scan_port_threshold=number("PORT_SCAN_PORT_THRESHOLD", "port_scan_port_threshold", 50),
             port_scan_time_window_seconds=number("PORT_SCAN_TIME_WINDOW", "port_scan_time_window_seconds", 10),
@@ -136,6 +172,9 @@ class Settings:
             dns_query_time_window_seconds=number("DNS_QUERY_TIME_WINDOW", "dns_query_time_window_seconds", 10),
             arp_conflict_time_window_seconds=number("ARP_CONFLICT_TIME_WINDOW", "arp_conflict_time_window_seconds", 120),
             arp_conflict_mac_threshold=number("ARP_CONFLICT_MAC_THRESHOLD", "arp_conflict_mac_threshold", 2),
+            dhcp_server_conflict_time_window_seconds=number("DHCP_SERVER_CONFLICT_TIME_WINDOW", "dhcp_server_conflict_time_window_seconds", 120),
+            dhcp_server_conflict_threshold=number("DHCP_SERVER_CONFLICT_THRESHOLD", "dhcp_server_conflict_threshold", 2),
+            insecure_service_ports=tuple(insecure_service_ports) or (21, 23),
             alert_cooldown_seconds=_positive_int("ALERT_COOLDOWN", int(detection.get("alert_cooldown_seconds", 60))),
             rate_window_seconds=_positive_int("RATE_WINDOW_SECONDS", int(_nested(document, "dashboard", "rate_window_seconds", default=5))),
             history_window_seconds=_positive_int("HISTORY_WINDOW_SECONDS", 60),
@@ -144,6 +183,7 @@ class Settings:
             max_connections=_positive_int("MAX_CONNECTIONS", 10_000),
             connection_ttl_seconds=_positive_int("CONNECTION_TTL_SECONDS", 300),
             max_detector_events_per_key=_positive_int("MAX_DETECTOR_EVENTS_PER_KEY", 10_000),
+            max_packet_history=_positive_int("MAX_PACKET_HISTORY", 1_000),
             database_path=getenv("DATABASE_PATH", str(storage.get("database_path", "network_sentinel.db"))),
             max_tracked_devices=_positive_int("MAX_TRACKED_DEVICES", 500),
             device_ttl_seconds=_positive_int("DEVICE_TTL_SECONDS", 3_600),
@@ -174,4 +214,25 @@ class Settings:
             download_max_files=_positive_int("DOWNLOAD_MAX_FILES", int(download_monitor.get("max_files", 1_000)) if isinstance(download_monitor, dict) else 1_000),
             download_hash_max_bytes=_positive_int("DOWNLOAD_HASH_MAX_BYTES", int(download_monitor.get("hash_max_bytes", 134_217_728)) if isinstance(download_monitor, dict) else 134_217_728),
             unsafe_domains=tuple(str(domain).strip().rstrip(".").lower() for domain in configured_domains if str(domain).strip()),
+            packet_tracer_dns_server=(
+                str(packet_tracer.get("dns_server") or packet_tracer_targets.get("dns_server")).strip()
+                if isinstance(packet_tracer, dict) and (packet_tracer.get("dns_server") or packet_tracer_targets.get("dns_server"))
+                else None
+            ),
+            packet_tracer_lab_mode=boolean(
+                "PACKET_TRACER_LAB_MODE",
+                packet_tracer.get("enabled", False) if isinstance(packet_tracer, dict) else False,
+            ),
+            packet_tracer_attacker_ip=topology_value("attacker", "192.168.10.10"),
+            packet_tracer_windows_target_ip=topology_value("windows_target", "192.168.20.10"),
+            packet_tracer_linux_target_ip=topology_value("linux_target", "192.168.20.20"),
+            packet_tracer_dmz_web_server_ip=topology_value("dmz_web_server", "192.168.30.10"),
+            packet_tracer_gateway_ip=topology_value("gateway", "192.168.20.1"),
+            packet_tracer_network_zone=(
+                str(packet_tracer.get("attacker_network", "192.168.10.0/24")).strip()
+                if isinstance(packet_tracer, dict) else "192.168.10.0/24"
+            ),
+            packet_tracer_authentication_targets=tuple(
+                str(item).strip() for item in configured_auth_targets if str(item).strip()
+            ) or (topology_value("linux_target", "192.168.20.20"),),
         )
