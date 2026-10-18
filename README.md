@@ -53,6 +53,42 @@ plus end-to-end check are [`pt_traffic_replay.py`](pt_traffic_replay.py) and
 [`test_pipeline.py`](test_pipeline.py). See the complete
 [Packet Tracer bridge guide](docs/packet-tracer/IDS_BRIDGE.md).
 
+### Active Packet Tracer topology and addressing
+
+The diagram below is the **active reference lab** used by
+[`config.packet-tracer.yaml`](config.packet-tracer.yaml), the collector, and
+the Packet Tracer replay tests. It is an editable SVG diagram rather than a
+fake screenshot, so its IP addresses and device labels remain readable on
+GitHub and easy to update when the lab changes.
+
+![Network Sentinel Packet Tracer reference lab](packet-tracer-lab.svg)
+
+| Zone | Network / gateway | Important devices | Purpose |
+| --- | --- | --- | --- |
+| Attacker test | `192.168.10.0/24` / `192.168.10.1` | `ATTACK-PC` `192.168.10.10` | Safe source for the simulated ping, DNS, and port-probe stories. |
+| Internal victims | `192.168.20.0/24` / `192.168.20.1` | `VICTIM-PC` `.20.10`, `APP-SRV` `.20.20`, `DNS-SRV` `.20.53` | Windows-like target, FTP/SSH application target, and DNS target. |
+| DMZ | `192.168.30.0/24` / `192.168.30.1` | `WEB-SRV` `192.168.30.10` | HTTP/HTTPS demonstration service. |
+| Monitoring | `192.168.40.0/24` / `192.168.40.1` | `LOG-SRV` `.40.10`, `ADMIN-PC` `.40.20` | Syslog/collector and administration zone. |
+
+All lab masks are `255.255.255.0`. R1 provides the four `.1` gateways; the
+reference diagram uses router subinterfaces and a core trunk. If your Packet
+Tracer file instead uses separate routed interfaces, keep the same addresses
+and update only the physical-port notes. For a mirrored-monitoring version,
+use Switch B as the source (`Gi0/1`, `Fa0/1–3`, both directions) and its
+monitor destination port as the monitoring uplink; Packet Tracer simulation
+details remain the authoritative visual evidence of those frames.
+
+When you change an address, update the `packet_tracer.targets` mapping in
+[`config.packet-tracer.yaml`](config.packet-tracer.yaml) first, then make the
+same change in the Packet Tracer diagram/file. That keeps replay events and
+lab-specific DNS/FTP/SSH detections aligned without hardcoding the addresses
+in Python.
+
+> The proprietary `.pkt` simulator file is intentionally not in this source
+> repository yet. Add it only after opening it in Cisco Packet Tracer and
+> confirming it is the version you want to share; the documented diagram and
+> address plan above are the safe, reviewable source for the repository.
+
 ## Configure data sources
 
 [`config.yaml`](config.yaml) is the main configuration file. It chooses enabled

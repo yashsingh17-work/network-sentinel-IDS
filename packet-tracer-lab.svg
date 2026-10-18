@@ -43,7 +43,7 @@
 <text x="440" y="714" class="t">PC-PT VICTIM-PC: 192.168.20.10</text>
 <text x="440" y="740" class="s">FastEthernet0 ↔ Fa0/1</text>
 <text x="440" y="769" class="t">Server-PT APP-SRV: .20.20</text>
-<text x="440" y="795" class="s">FastEthernet0 ↔ Fa0/2 · TCP 80</text>
+<text x="440" y="795" class="s">FastEthernet0 ↔ Fa0/2 · FTP 21 / SSH 22</text>
 <text x="440" y="824" class="t">Server-PT DNS-SRV: .20.53</text>
 <text x="440" y="850" class="s">FastEthernet0 ↔ Fa0/3 · UDP 53</text>
 <rect x="820" y="569" width="350" height="110" rx="8" class="box"/>

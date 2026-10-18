@@ -1,5 +1,12 @@
 # Network Sentinel Packet Tracer demo lab
 
+> **Important:** the active collector/replay lab is the `192.168.10.0/24`,
+> `192.168.20.0/24`, `192.168.30.0/24`, and `192.168.40.0/24` reference
+> topology shown in the root [README](../../README.md) and configured in
+> [`config.packet-tracer.yaml`](../../config.packet-tracer.yaml). This page
+> describes a separate, optional enterprise-style showcase topology; do not
+> mix its `198.18.x.x` and `10.10.x.x` addresses with the active lab profile.
+
 This is a **safe hybrid demonstration**. Cisco Packet Tracer shows the dummy
 network and packet path; Network Sentinel remains the local security dashboard.
 Packet Tracer does not execute this Python application or send its simulated
